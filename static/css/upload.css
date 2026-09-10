@@ -465,7 +465,6 @@ body.dark-mode .secondary-action-btn {
         margin-bottom: 0;
         flex-shrink: 0;
         border-radius: 30px !important;
-        overflow: hidden;
     }
 
     #manual-search {
