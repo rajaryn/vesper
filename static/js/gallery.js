@@ -1,6 +1,7 @@
 //Image loading, cards, and the lightbox carousel
 
 import { API_BASE, svgMoon, svgSun } from "./constants.js";
+import { parseAppDate } from "./utils.js";
 
 const galleryModal = document.getElementById("gallery-modal");
 const galleryContent = document.getElementById("gallery-content");
@@ -67,11 +68,8 @@ export async function openGallery(pinId) {
 
       const dateElement = document.createElement("div");
       dateElement.className = "image-date";
-      const safeDateString = img.uploaded_at.replace(" ", "T");
-      const utcString = safeDateString.endsWith("Z")
-        ? safeDateString
-        : safeDateString + "Z";
-      dateElement.innerText = new Date(utcString).toLocaleString(undefined, {
+      const uploadDate = parseAppDate(img.uploaded_at);
+      dateElement.innerText = uploadDate.toLocaleString(undefined, {
         year: "numeric",
         month: "short",
         day: "numeric",
@@ -119,12 +117,8 @@ function updateLightboxView(direction = "none") {
   else lightboxImg.style.transform = "scale(0.95)";
 
   setTimeout(() => {
-    lightboxImg.src = img.file_path;
-    const safeDateString = img.uploaded_at.replace(" ", "T");
-    const utcString = safeDateString.endsWith("Z")
-      ? safeDateString
-      : safeDateString + "Z";
-    lightboxDate.innerText = new Date(utcString).toLocaleString(undefined, {
+    const uploadDate = parseAppDate(img.uploaded_at);
+    lightboxDate.innerText = uploadDate.toLocaleString(undefined, {
       year: "numeric",
       month: "short",
       day: "numeric",

@@ -2,6 +2,7 @@
 
 import { API_BASE } from "./constants.js";
 import { openMomentView } from "./moment-view.js";
+import { parseAppDate } from "./utils.js";
 
 export let map;
 export let markersLayer;
@@ -93,15 +94,22 @@ export async function fetchAllPins() {
 
     if (!Array.isArray(pins)) return;
 
-    const todayString = new Date().toISOString().split("T")[0];
+    const now = new Date();
+    const todayYear = now.getFullYear();
+    const todayMonth = now.getMonth();
+    const todayDate = now.getDate();
 
     pins.forEach((pin) => {
       let isToday = false;
       if (pin.last_upload_at) {
-        const safeDateStr =
-          pin.last_upload_at.replace(" ", "T") +
-          (pin.last_upload_at.endsWith("Z") ? "" : "Z");
-        if (safeDateStr.split("T")[0] === todayString) isToday = true;
+        const pinDate = parseAppDate(pin.last_upload_at);
+        if (
+          pinDate.getFullYear() === todayYear &&
+          pinDate.getMonth() === todayMonth &&
+          pinDate.getDate() === todayDate
+        ) {
+          isToday = true;
+        }
       }
 
       const pinClass = isToday ? "today-pin" : "premium-pin";

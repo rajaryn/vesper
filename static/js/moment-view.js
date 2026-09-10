@@ -1,6 +1,7 @@
 // Immersive Moment View - 2-State Physics Architecture
 
 import { API_BASE } from "./constants.js";
+import { parseAppDate } from "./utils.js";
 
 const momentModal = document.getElementById("moment-modal");
 const momentSlider = document.getElementById("moment-slider");
@@ -398,11 +399,7 @@ function updateUiForCurrentImage() {
 
   const captureType =
     currentMomentData.capture_type === "moon" ? "Night Sky" : "Sunset";
-  const safeDateString = currentMomentData.uploaded_at.replace(" ", "T");
-  const utcString = safeDateString.endsWith("Z")
-    ? safeDateString
-    : safeDateString + "Z";
-  const uploadDate = new Date(utcString);
+  const uploadDate = parseAppDate(currentMomentData.uploaded_at);
 
   // Always show date - no toggle functionality
   const smartDate = getSmartDate(currentMomentData.uploaded_at);
@@ -429,11 +426,7 @@ function updateUiForCurrentImage() {
 }
 
 function formatTimeDisplay(uploadedAt, captureType) {
-  const safeDateString = uploadedAt.replace(" ", "T");
-  const utcString = safeDateString.endsWith("Z")
-    ? safeDateString
-    : safeDateString + "Z";
-  const uploadDate = new Date(utcString);
+  const uploadDate = parseAppDate(uploadedAt);
   const timeStr = uploadDate.toLocaleString(undefined, {
     hour: "numeric",
     minute: "2-digit",
@@ -442,11 +435,7 @@ function formatTimeDisplay(uploadedAt, captureType) {
 }
 
 function getSmartDate(uploadedAt) {
-  const safeDateString = uploadedAt.replace(" ", "T");
-  const utcString = safeDateString.endsWith("Z")
-    ? safeDateString
-    : safeDateString + "Z";
-  const uploadDate = new Date(utcString);
+  const uploadDate = parseAppDate(uploadedAt);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
