@@ -134,6 +134,7 @@ body.dark-mode .action-btn {
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     z-index: 5000;
     display: flex;
     flex-direction: column;
@@ -639,7 +640,7 @@ body.dark-mode .air-datepicker .adp-time-track {
     background: rgba(255, 255, 255, 0.05);
 }
 
-/* 6. Mobile Bounds Fix (Perfect Centering) */
+/* 6. Mobile Bounds Fix (Perfect Centering & Viewport Fit) */
 @media (max-width: 768px) {
     .air-datepicker {
         width: 92vw !important;
@@ -647,14 +648,15 @@ body.dark-mode .air-datepicker .adp-time-track {
         max-width: 360px !important;
         /* Cap max width so it doesn't get awkward on tablets */
         position: fixed !important;
-        bottom: 20px !important;
-        top: auto !important;
-
-        /* Center it cleanly instead of pinning to the left */
+        top: 50% !important;
+        bottom: auto !important;
         left: 50% !important;
-        transform: translateX(-50%) !important;
-
-        box-sizing: border-box;
+        transform: translate(-50%, -50%) !important;
+        max-height: calc(100dvh - 30px) !important;
+        max-height: calc(100vh - 30px) !important;
+        overflow-y: auto !important;
+        box-sizing: border-box !important;
+        z-index: 99999 !important;
     }
 }
 

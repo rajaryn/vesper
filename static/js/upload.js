@@ -197,6 +197,19 @@ const localeEn = {
   firstDay: 0,
 };
 
+function formatLocalDate(d) {
+  if (!(d instanceof Date) || isNaN(d.getTime())) {
+    d = new Date();
+  }
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  const seconds = String(d.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
 function showDatePicker(dateToUse) {
   if (!(dateToUse instanceof Date) || isNaN(dateToUse.getTime())) {
     dateToUse = new Date();
@@ -216,15 +229,10 @@ function showDatePicker(dateToUse) {
       position: "bottom center",
       autoClose: false,
       isMobile: false,
-      // CRITICAL FIX: Lock the calendar DOM element inside your container
-      // rather than the document body to prevent null coordinate crashes.
       container: "#date-picker-container",
       onSelect: ({ date }) => {
         if (date && !Array.isArray(date)) {
-          finalDate =
-            new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-              .toISOString()
-              .split(".")[0] + "Z";
+          finalDate = formatLocalDate(date);
         }
       },
     });
@@ -234,10 +242,7 @@ function showDatePicker(dateToUse) {
   airPickerInstance.clear();
   airPickerInstance.selectDate(dateToUse);
 
-  finalDate =
-    new Date(dateToUse.getTime() - dateToUse.getTimezoneOffset() * 60000)
-      .toISOString()
-      .split(".")[0] + "Z";
+  finalDate = formatLocalDate(dateToUse);
 }
 
 // ==========================================
@@ -436,11 +441,23 @@ if (btnShareMap) {
     btnShareMap.innerText = "Saving your moment...";
     btnShareMap.disabled = true;
 
+    let uploadDate = finalDate;
+    if (
+      airPickerInstance &&
+      airPickerInstance.selectedDates &&
+      airPickerInstance.selectedDates.length > 0
+    ) {
+      const selected = airPickerInstance.selectedDates[0];
+      if (selected instanceof Date && !isNaN(selected.getTime())) {
+        uploadDate = formatLocalDate(selected);
+      }
+    }
+
     const formData = new FormData();
     formData.append("image", selectedFile);
     formData.append("lat", finalLat);
     formData.append("lon", finalLon);
-    formData.append("captured_at", finalDate);
+    formData.append("captured_at", uploadDate);
     formData.append("capture_type", selectedType);
 
     try {

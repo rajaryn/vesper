@@ -159,21 +159,21 @@ def upload():
     lon_str = request.form.get('lon')
     capture_type = request.form.get('capture_type', 'sun')
     
-    # NEW: Grab the historical EXIF time from the frontend (if it exists)
+    # Grab the historical EXIF time from the frontend (if it exists)
     captured_at_str = request.form.get('captured_at')
     if captured_at_str:
-            try:
-                # FIX: Convert '2023-10-05T14:48:00.000Z' to '2023-10-05 14:48:00'
-                # We split at the period to remove milliseconds, and replace T with a space
-                cleaned_time_str = captured_at_str.split('.')[0].replace('T', ' ')
-                # Validate the format
-                parsed_time = datetime.strptime(cleaned_time_str, '%Y-%m-%d %H:%M:%S')
-                final_time = parsed_time.strftime('%Y-%m-%d %H:%M:%S')
-            except ValueError:
-                # Fallback if parsing fails for some reason
-                final_time = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+        try:
+            # Clean possible ISO format: '2023-10-05T14:48:00.000Z', '2023-10-05T14:48:00Z', or '2023-10-05 14:48:00'
+            cleaned_time_str = captured_at_str.replace('Z', '').replace('z', '').split('.')[0].replace('T', ' ').strip()
+            # Validate and normalize the format
+            parsed_time = datetime.strptime(cleaned_time_str, '%Y-%m-%d %H:%M:%S')
+            final_time = parsed_time.strftime('%Y-%m-%d %H:%M:%S')
+        except ValueError as e:
+            print(f"Date parsing failed for '{captured_at_str}': {e}")
+            # Fallback if parsing fails
+            final_time = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     else:
-            final_time = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S') # Uses current date
+        final_time = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S') # Uses current date
 
     if not file or file.filename == '' or not lat_str or not lon_str:
         return jsonify({'error': 'Missing required data'}), 400
