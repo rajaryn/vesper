@@ -78,14 +78,24 @@ def init_db():
         print(f"Error creating tables: {e}")
 
 
-def get_db_connection():
-    """Returns a connection to the database for use in app endpoints."""
-    try:
-        conn = mysql.connector.connect(**DB_CONFIG)
-        return conn
-    except Error as e:
-        print(f"Error connecting to MySQL: {e}")
-        return None
+import time
+
+def get_db_connection(retries=3, delay=2):
+    """Returns a connection to the database for use in app endpoints, with retries for serverless wake-ups."""
+    # Add a longer connection timeout for serverless DBs (like TiDB) waking up
+    config = {**DB_CONFIG, "connect_timeout": 30}
+    
+    for attempt in range(retries):
+        try:
+            conn = mysql.connector.connect(**config)
+            return conn
+        except Error as e:
+            print(f"Database connection attempt {attempt + 1} failed: {e}")
+            if attempt < retries - 1:
+                time.sleep(delay)
+            else:
+                print("All database connection attempts failed.")
+                return None
 
 
 if __name__ == "__main__":

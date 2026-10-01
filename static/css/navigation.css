@@ -38,8 +38,8 @@
 
 .glass-pill {
     background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.3);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     display: flex;
@@ -163,8 +163,8 @@ body.dark-mode .glass-pill {
     width: 280px;
     height: 100vh;
     background: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(25px);
-    -webkit-backdrop-filter: blur(25px);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
     border-right: 1px solid rgba(255, 255, 255, 0.3);
     z-index: 4000;
     padding: max(40px, env(safe-area-inset-top)) 20px 20px;
@@ -259,8 +259,8 @@ body.dark-mode .menu-item {
     display: flex;
     align-items: center;
     background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 25px;
     padding: 0 15px;

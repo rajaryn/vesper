@@ -1,7 +1,7 @@
 //Image loading, cards, and the lightbox carousel
 
 import { API_BASE, svgMoon, svgSun } from "./constants.js";
-import { parseAppDate } from "./utils.js";
+import { parseAppDate, getCloudinaryThumbnail } from "./utils.js";
 
 const galleryModal = document.getElementById("gallery-modal");
 const galleryContent = document.getElementById("gallery-content");
@@ -62,7 +62,8 @@ export async function openGallery(pinId) {
       typeBadge.innerHTML = img.capture_type === "moon" ? svgMoon : svgSun;
 
       const imgElement = document.createElement("img");
-      imgElement.src = img.file_path;
+      imgElement.src = getCloudinaryThumbnail(img.file_path, 400);
+      imgElement.dataset.original = img.file_path;
       imgElement.className = "gallery-img";
       imgElement.loading = "lazy";
 

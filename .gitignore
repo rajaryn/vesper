@@ -13,3 +13,5 @@ wheels/
 upgrade.py
 
 static/script_backup.js
+static/tiles/
+

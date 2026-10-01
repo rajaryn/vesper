@@ -80,8 +80,8 @@
     top: 10px;
     left: 10px;
     background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     padding: 6px 8px;
     border-radius: 15px;
     font-size: 0.85rem;
@@ -96,8 +96,8 @@
     top: 10px;
     right: 10px;
     background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     color: #333;
     padding: 6px 12px;
     border-radius: 20px;
@@ -157,8 +157,8 @@
 .lightbox-date {
     margin-top: 20px;
     background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     color: #333;
     padding: 8px 18px;
     border-radius: 25px;
@@ -175,8 +175,8 @@
 .close-btn,
 .lightbox-close {
     background: rgba(255, 255, 255, 0.3);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     color: #333;
     border: 1px solid rgba(255, 255, 255, 0.4);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
@@ -297,7 +297,7 @@ body.dark-mode .lightbox-date {
     height: 120%;
     background-size: cover;
     background-position: center;
-    filter: blur(50px) brightness(0.4) saturate(1.5);
+    filter: blur(40px) brightness(0.4) saturate(1.5);
     z-index: 0;
     transition: background-image 0.6s ease-in-out;
 }

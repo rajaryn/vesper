@@ -52,3 +52,11 @@ export function parseAppDate(dateStr) {
   }
   return new Date(dateStr);
 }
+export function getCloudinaryThumbnail(url, width = 400) {
+  if (!url || !url.includes('cloudinary.com')) return url;
+  if (url.includes('/upload/')) {
+    return url.replace('/upload/', '/upload/w_' + width + ',c_fill,q_auto/');
+  }
+  return url;
+}
+
