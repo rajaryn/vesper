@@ -126,10 +126,11 @@ const handleFileSelection = async (e) => {
             </svg>
         </div>
         <div class="heic-fallback-text">
-            <span class="heic-filename">${file.name}</span>
+            <span class="heic-filename"></span>
             <span class="heic-subtext">Ready to place.</span>
         </div>
     `;
+    fallbackDiv.querySelector(".heic-filename").textContent = file.name;
     previewContainer.appendChild(fallbackDiv);
   } else {
     stagingImg.src = URL.createObjectURL(file);

@@ -1,4 +1,6 @@
 import os
+import io
+import hmac
 import math
 import heapq
 import urllib.request
@@ -6,7 +8,10 @@ import urllib.error
 from datetime import datetime, timezone
 from flask import Flask, Response, request, jsonify, render_template, send_from_directory 
 from flask import make_response
-from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from PIL import Image
 from db import get_db_connection
 import cloudinary
 import cloudinary.uploader
@@ -20,7 +25,22 @@ from image_utils import convert_heic_to_jpg
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+# Same-origin front end: CORS is intentionally not enabled.
+
+# Trust one proxy hop so rate limiting sees the real client IP
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+
+limiter = Limiter(get_remote_address, app=app, default_limits=["300 per hour", "60 per minute"])
+
+Image.MAX_IMAGE_PIXELS = 50_000_000  # Guard against decompression bombs
+
+@app.after_request
+def add_security_headers(resp):
+    resp.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    resp.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+    resp.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+    resp.headers.setdefault('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+    return resp
 
 # Cloudinary Configuration
 cloudinary.config(
@@ -32,6 +52,8 @@ cloudinary.config(
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024 # Limit uploads to 5MB
 
 # Helper: Haversine distance
+ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif'}
+
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371.0 # Earth radius in kilometers
     dlat = math.radians(lat2 - lat1)
@@ -45,7 +67,12 @@ def check_auth(username, password):
     """Check if a username / password combination is valid."""
     correct_username = os.getenv('ADMIN_USERNAME')
     correct_password = os.getenv('ADMIN_PASSWORD')
-    return username == correct_username and password == correct_password
+    # Admin is disabled entirely unless both credentials are configured
+    if not correct_username or not correct_password:
+        return False
+    user_ok = hmac.compare_digest((username or '').encode(), correct_username.encode())
+    pass_ok = hmac.compare_digest((password or '').encode(), correct_password.encode())
+    return user_ok and pass_ok
 
 def authenticate():
     """Sends a 401 response that enables basic auth"""
@@ -92,6 +119,10 @@ def offline():
 # A super lightweight endpoint for pinging services to keep the server awake
 @app.route('/wake', methods=['GET'])
 def wake_up():
+    # Warm the TiDB connection too, so the first real request after idle isn't slow
+    conn = get_db_connection()
+    if conn:
+        conn.close()
     return jsonify({"message": "The sky is awake."}), 200
 
 # --- Frontend Serving Routes ---
@@ -129,10 +160,14 @@ import os
 http_pool = urllib3.PoolManager(maxsize=20)
 TILES_CACHE_DIR = os.path.join('static', 'tiles')
 os.makedirs(TILES_CACHE_DIR, exist_ok=True)
+MAX_CACHED_TILES = 20000
 
 # Carto Basemap Tile Proxy (protects CARTO_API_KEY on the backend)
 @app.route('/tiles/<int:z>/<int:x>/<int:y>.png', methods=['GET'])
 def tile_proxy(z, x, y):
+    if not (0 <= z <= 19 and 0 <= x < 2**z and 0 <= y < 2**z):
+        return Response("Invalid tile", status=400, mimetype="text/plain")
+
     # 1. Check local disk cache first (blazing fast)
     tile_filename = f"{z}_{x}_{y}.png"
     tile_path = os.path.join(TILES_CACHE_DIR, tile_filename)
@@ -152,9 +187,13 @@ def tile_proxy(z, x, y):
     try:
         response = http_pool.request('GET', url, headers={"User-Agent": "Vesper/1.0"}, timeout=5.0)
         if response.status == 200:
-            # Save to disk cache for future requests
-            with open(tile_path, 'wb') as f:
-                f.write(response.data)
+            # Save to disk cache for future requests (bounded so it can't fill the disk)
+            try:
+                if len(os.listdir(TILES_CACHE_DIR)) < MAX_CACHED_TILES:
+                    with open(tile_path, 'wb') as f:
+                        f.write(response.data)
+            except OSError as e:
+                print(f"Tile cache write failed: {e}")
                 
             resp = make_response(response.data)
             resp.headers['Content-Type'] = 'image/png'
@@ -163,9 +202,11 @@ def tile_proxy(z, x, y):
         else:
             return Response("Tile not found", status=response.status, mimetype="text/plain")
     except Exception as e:
-        return Response(str(e), status=502, mimetype="text/plain")
+        print(f"Tile proxy error: {type(e).__name__}")
+        return Response("Tile unavailable", status=502, mimetype="text/plain")
 
 @app.route('/upload', methods=['POST'])
+@limiter.limit("5 per hour; 2 per minute")
 def upload():
     # 1. Input Validation
     if 'image' not in request.files:
@@ -175,6 +216,8 @@ def upload():
     lat_str = request.form.get('lat')
     lon_str = request.form.get('lon')
     capture_type = request.form.get('capture_type', 'sun')
+    if capture_type not in ('sun', 'moon'):
+        return jsonify({'error': 'Invalid capture type'}), 400
     
     # Grab the historical EXIF time from the frontend (if it exists)
     captured_at_str = request.form.get('captured_at')
@@ -200,6 +243,21 @@ def upload():
         lon = round(float(lon_str), 3)
     except ValueError:
         return jsonify({'error': 'Invalid coordinates format'}), 400
+
+    if not (math.isfinite(lat) and math.isfinite(lon) and -90 <= lat <= 90 and -180 <= lon <= 180):
+        return jsonify({'error': 'Coordinates out of range'}), 400
+
+    # Verify the bytes really are an image (extension alone is not trusted)
+    ext = os.path.splitext(file.filename.lower())[1]
+    if ext not in ALLOWED_EXTENSIONS:
+        return jsonify({'error': 'Unsupported file type'}), 400
+    if ext not in ('.heic', '.heif'):
+        try:
+            Image.open(file.stream).verify()
+        except Exception:
+            return jsonify({'error': 'File is not a valid image'}), 400
+        finally:
+            file.stream.seek(0)
 
    
     # 2. Process & Upload to Cloudinary
@@ -230,7 +288,7 @@ def upload():
         image_url = upload_result.get('secure_url')
     except Exception as e:
         print(f"UPLOAD/PROCESSING ERROR: {e}") 
-        return jsonify({'error': 'Upload or processing failed', 'details': str(e)}), 500
+        return jsonify({'error': 'Upload or processing failed'}), 500
 
     # 3. Database Transaction
     conn = get_db_connection()
@@ -262,7 +320,8 @@ def upload():
 
     except Exception as e:
         conn.rollback()
-        return jsonify({'error': 'Database transaction failed', 'details': str(e)}), 500
+        print(f"DB TRANSACTION ERROR: {e}")
+        return jsonify({'error': 'Database transaction failed'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -339,7 +398,8 @@ def get_gallery(pin_id):
                 
         return jsonify(images), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"DB ERROR: {e}")
+        return jsonify({'error': 'Failed to fetch images'}), 500
     finally:
         cursor.close()
         conn.close()
@@ -347,11 +407,13 @@ def get_gallery(pin_id):
 # --- ADMIN & MODERATION ROUTES ---
 
 @app.route('/admin')
+@limiter.limit("20 per minute")
 @requires_auth
 def admin_page():
     return render_template('admin.html')
 
 @app.route('/admin/image/<int:image_id>', methods=['DELETE'])
+@limiter.limit("20 per minute")
 @requires_auth
 def delete_image(image_id):
     conn = get_db_connection()
@@ -376,12 +438,14 @@ def delete_image(image_id):
             
     except Exception as e:
         conn.rollback()
-        return jsonify({'error': str(e)}), 500
+        print(f"ADMIN DELETE ERROR: {e}")
+        return jsonify({'error': 'Delete failed'}), 500
     finally:
         cursor.close()
         conn.close()
 
 @app.route('/admin/pin/<int:pin_id>', methods=['DELETE'])
+@limiter.limit("20 per minute")
 @requires_auth
 def delete_pin(pin_id):
     conn = get_db_connection()
@@ -393,22 +457,27 @@ def delete_pin(pin_id):
         cursor.execute("SELECT file_path FROM images WHERE pin_id = %s", (pin_id,))
         images = cursor.fetchall()
         
+        cursor.execute("DELETE FROM pins WHERE id = %s", (pin_id,))
+        conn.commit()
+
+        # Remove remote files only after the DB delete succeeded
         for img in images:
             public_id = get_cloudinary_public_id(img['file_path'])
             if public_id:
-                cloudinary.uploader.destroy(public_id)
-                
-        cursor.execute("DELETE FROM pins WHERE id = %s", (pin_id,))
-        conn.commit()
+                try:
+                    cloudinary.uploader.destroy(public_id)
+                except Exception as e:
+                    print(f"Cloudinary cleanup failed for {public_id}: {e}")
         
         return jsonify({"status": "success"}), 200
         
     except Exception as e:
         conn.rollback()
-        return jsonify({'error': str(e)}), 500
+        print(f"ADMIN DELETE ERROR: {e}")
+        return jsonify({'error': 'Delete failed'}), 500
     finally:
         cursor.close()
         conn.close()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=os.getenv('FLASK_DEBUG') == '1')
