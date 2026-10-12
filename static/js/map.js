@@ -2,7 +2,7 @@
 
 import { API_BASE } from "./constants.js";
 import { openMomentView } from "./moment-view.js";
-import { parseAppDate } from "./utils.js";
+import { parseAppDate, fetchWithRetry } from "./utils.js";
 
 export let map;
 export let markersLayer;
@@ -86,7 +86,7 @@ export function fetchSilentGPS() {
 
 export async function fetchAllPins() {
   try {
-    const response = await fetch(`${API_BASE}/pins`);
+    const response = await fetchWithRetry(`${API_BASE}/pins`);
     if (!response.ok) throw new Error(`Server error: ${response.status}`);
 
     const pins = await response.json();

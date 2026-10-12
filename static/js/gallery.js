@@ -1,7 +1,7 @@
 //Image loading, cards, and the lightbox carousel
 
 import { API_BASE, svgMoon, svgSun } from "./constants.js";
-import { parseAppDate, getCloudinaryThumbnail } from "./utils.js";
+import { parseAppDate, getCloudinaryThumbnail, fetchWithRetry } from "./utils.js";
 
 const galleryModal = document.getElementById("gallery-modal");
 const galleryContent = document.getElementById("gallery-content");
@@ -32,7 +32,7 @@ export async function openGallery(pinId) {
   galleryLoading.innerHTML = `<div class="orbiting-ember"></div>`;
 
   try {
-    const response = await fetch(`${API_BASE}/pins/${pinId}`);
+    const response = await fetchWithRetry(`${API_BASE}/pins/${pinId}`);
     if (!response.ok) throw new Error("Fetch failed");
     const images = await response.json();
 

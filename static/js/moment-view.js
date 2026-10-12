@@ -1,7 +1,7 @@
 // Immersive Moment View - 2-State Physics Architecture
 
 import { API_BASE } from "./constants.js";
-import { parseAppDate } from "./utils.js";
+import { parseAppDate, fetchWithRetry } from "./utils.js";
 
 const momentModal = document.getElementById("moment-modal");
 const momentSlider = document.getElementById("moment-slider");
@@ -56,7 +56,7 @@ export async function openMomentView(pinId, lat, lon) {
   momentLoader.classList.remove("fade-out");
 
   try {
-    const response = await fetch(`${API_BASE}/pins/${pinId}`);
+    const response = await fetchWithRetry(`${API_BASE}/pins/${pinId}`);
     if (!response.ok) throw new Error("Fetch failed");
     const images = await response.json();
 

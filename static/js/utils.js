@@ -60,3 +60,21 @@ export function getCloudinaryThumbnail(url, width = 400) {
   return url;
 }
 
+
+// Fetch with retries/backoff so a cold (sleeping) backend or TiDB doesn't leave the UI stuck.
+export async function fetchWithRetry(url, options = {}, retries = 4, delay = 1500) {
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.ok) return res;
+      lastError = new Error(`Server error: ${res.status}`);
+    } catch (err) {
+      lastError = err;
+    }
+    if (attempt < retries) {
+      await new Promise((r) => setTimeout(r, delay * (attempt + 1)));
+    }
+  }
+  throw lastError;
+}
