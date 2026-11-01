@@ -15,3 +15,6 @@ upgrade.py
 static/script_backup.js
 static/tiles/
 
+test_heatwave.py
+heatwave-ca.pem
+
