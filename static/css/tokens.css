@@ -1,0 +1,66 @@
+/* ==============================================
+   0. DESIGN TOKENS
+   One place for colour, shape and type. Dark mode only swaps the values.
+   ============================================== */
+:root {
+    --accent: #ff5e3a;
+    --accent-strong: #f04a25;
+    --accent-soft: rgba(255, 94, 58, 0.15);
+    --accent-glow: rgba(255, 94, 58, 0.35);
+    --on-accent: #ffffff;
+
+    /* Matches the basemap's land, so chrome and map read as one surface */
+    --bg: #fafaf8;
+    --text: #2b2d30;
+    --text-muted: #6b7076;
+    --text-faint: #9a9fa5;
+    --border: rgba(0, 0, 0, 0.08);
+
+    /* Frosted glass used by pills, bars, sheets and toasts */
+    --glass: rgba(255, 255, 255, 0.72);
+    --glass-strong: rgba(255, 255, 255, 0.9);
+    --glass-border: rgba(0, 0, 0, 0.08);
+    --shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.14);
+
+    --map-border: #a3a3a3;
+
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 24px;
+    --radius-pill: 999px;
+
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --text-3xl: 2rem;
+    --text-4xl: 2.5rem;
+
+    --weight-medium: 500;
+    --weight-semibold: 600;
+    --weight-bold: 700;
+
+    --ease: cubic-bezier(0.25, 0.8, 0.25, 1);
+
+    accent-color: var(--accent);
+}
+
+/* The app marks dark mode on <body>, the standalone pages on <html> */
+body.dark-mode,
+html.dark-mode {
+    --accent-soft: rgba(255, 94, 58, 0.2);
+    --bg: #1c1f22;
+    --text: #e6e8ea;
+    --text-muted: #9aa1a9;
+    --text-faint: #6b7380;
+    --border: rgba(255, 255, 255, 0.1);
+    --glass: rgba(24, 27, 31, 0.72);
+    --glass-strong: rgba(24, 27, 31, 0.92);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
+    --map-border: #59616b;
+}

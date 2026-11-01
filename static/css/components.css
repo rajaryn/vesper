@@ -2,60 +2,86 @@
    COMPONENTS: BUTTONS, PINS, TOASTS, LOADERS
    ============================================== */
 
-/* --- CAPTURE BUTTON --- */
+/* --- CAPTURE BUTTON ---
+   The one solid-colour element on the map: it's the main thing to do here */
 .upload-btn {
     position: absolute;
-    bottom: 30px;
+    bottom: max(32px, calc(env(safe-area-inset-bottom) + 20px));
     left: 50%;
     transform: translateX(-50%);
     z-index: 1000;
-    background-color: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    color: #333;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    padding: 15px 30px;
-    border-radius: 30px;
-    font-size: 16px;
-    font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--accent);
+    color: var(--on-accent);
+    border: none;
+    padding: 14px 28px;
+    border-radius: var(--radius-pill);
+    font: inherit;
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.2px;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
+    box-shadow: 0 6px 20px var(--accent-glow), 0 2px 6px rgba(0, 0, 0, 0.12);
+    transition: transform 0.25s var(--ease), box-shadow 0.25s ease, background-color 0.2s ease, opacity 0.25s ease;
     white-space: nowrap;
     max-width: calc(100vw - 40px);
     box-sizing: border-box;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.upload-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 @media (hover: hover) {
     .upload-btn:hover {
-        border-color: #ff5e3a !important;
-        box-shadow: 0 4px 20px rgba(255, 94, 58, 0.2) !important;
-        transform: translateX(-50%) scale(1.05) !important;
+        background-color: var(--accent-strong);
+        box-shadow: 0 8px 26px var(--accent-glow), 0 2px 6px rgba(0, 0, 0, 0.12);
+        transform: translateX(-50%) translateY(-1px);
     }
 }
 
 .upload-btn:active {
-    border-color: #ff5e3a !important;
-    box-shadow: 0 4px 20px rgba(255, 94, 58, 0.2) !important;
-    transform: translateX(-50%) scale(0.98) !important;
-    transition: transform 0.1s ease !important;
+    transform: translateX(-50%) scale(0.97);
+    transition: transform 0.1s ease;
 }
 
-.upload-btn:disabled {
-    background-color: rgba(200, 200, 200, 0.5) !important;
-    color: #888 !important;
-    cursor: not-allowed !important;
-    box-shadow: none !important;
-    backdrop-filter: none !important;
-    transform: translateX(-50%) scale(1) !important;
+.upload-btn:focus-visible {
+    outline: 3px solid var(--accent-glow);
+    outline-offset: 3px;
 }
 
-body.dark-mode .upload-btn {
-    background-color: rgba(0, 0, 0, 0.5);
-    border-color: rgba(255, 255, 255, 0.15);
-    color: #e0e0e0;
+/* Step aside while a sheet, the menu or the upload screen is open; the solid
+   colour would otherwise glow through their frosted backgrounds */
+body:has(.drawer-overlay.show) .upload-btn,
+body:has(.staging-area.show) .upload-btn {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* --- MAP ATTRIBUTION (bottom-left, clear of the Capture button) --- */
+.leaflet-control-attribution.leaflet-control {
+    background: var(--glass) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--text-faint);
+    font-size: 10px;
+    line-height: 1.6;
+    padding: 0 8px;
+    margin: 0 0 max(4px, env(safe-area-inset-bottom)) max(4px, env(safe-area-inset-left)) !important;
+    border-radius: var(--radius-sm);
+}
+
+.leaflet-control-attribution a {
+    color: var(--text-muted) !important;
 }
 
 /* --- TOAST NOTIFICATIONS --- */
@@ -63,26 +89,29 @@ body.dark-mode .upload-btn {
     position: fixed;
     bottom: 100px;
     left: 50%;
-    transform: translate(-50%, 30px) scale(0.85);
+    transform: translate(-50%, 30px) scale(0.9);
     opacity: 0;
     visibility: hidden;
-    background: rgba(255, 255, 255, 0.85);
+    background: var(--glass-strong);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    color: #333;
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    padding: 12px 24px;
-    border-radius: 40px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    letter-spacing: 0.3px;
+    color: var(--text);
+    border: 1px solid var(--glass-border);
+    padding: 12px 20px;
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    line-height: 1.35;
     z-index: 9999;
     display: flex;
     align-items: center;
     gap: 10px;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1), 0 0 20px rgba(255, 94, 58, 0.2);
-    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    white-space: nowrap;
+    box-shadow: var(--shadow-lg);
+    transition: all 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    /* Wrap long messages instead of running off narrow screens */
+    width: max-content;
+    max-width: min(440px, calc(100vw - 32px));
+    box-sizing: border-box;
     pointer-events: none;
 }
 
@@ -109,13 +138,6 @@ body.dark-mode .upload-btn {
     stroke-linejoin: round;
 }
 
-body.dark-mode .toast {
-    background: rgba(20, 20, 20, 0.85);
-    color: #fff;
-    border-color: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25), 0 0 25px rgba(255, 94, 58, 0.35);
-}
-
 /* --- MAP PINS --- */
 .sunset-wrapper {
     background: transparent;
@@ -125,7 +147,7 @@ body.dark-mode .toast {
 .premium-pin {
     width: 16px;
     height: 16px;
-    background-color: #ff5e3a;
+    background-color: var(--accent);
     border-radius: 50%;
     border: 2px solid #ffffff;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
@@ -143,7 +165,7 @@ body.dark-mode .toast {
 .today-pin {
     width: 16px;
     height: 16px;
-    background-color: #ff5e3a;
+    background-color: var(--accent);
     border-radius: 50%;
     border: 2px solid #ffffff;
     box-shadow: 0 0 12px rgba(255, 94, 58, 0.8);
@@ -197,7 +219,7 @@ body.dark-mode .toast {
 
 body.dark-mode .premium-pin,
 body.dark-mode .today-pin {
-    border-color: #e0e0e0;
+    border-color: var(--text);
 }
 
 body.dark-mode .premium-pin {
@@ -220,7 +242,7 @@ body.dark-mode .today-pin:hover {
     height: 100%;
     box-sizing: border-box;
     /* Forces border to stay inside the Leaflet dimensions */
-    background-color: #ff5e3a;
+    background-color: var(--accent);
     border-radius: 50%;
     border: 2px solid #ffffff;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
@@ -228,7 +250,7 @@ body.dark-mode .today-pin:hover {
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    font-size: 13px;
+    font-size: var(--text-sm);
     color: #ffffff;
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     position: relative;
@@ -266,7 +288,7 @@ body.dark-mode .today-pin:hover {
 }
 
 body.dark-mode .custom-cluster {
-    border-color: #e0e0e0;
+    border-color: var(--text);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
@@ -299,7 +321,7 @@ body.dark-mode .custom-cluster:hover {
 .orbiting-ember {
     width: 20px;
     height: 20px;
-    background-color: #ff5e3a;
+    background-color: var(--accent);
     border-radius: 50%;
     filter: drop-shadow(0 0 10px rgba(255, 94, 58, 0.8));
     position: absolute;
@@ -318,24 +340,19 @@ body.dark-mode .custom-cluster:hover {
 
 /* Component Mobile Tweaks */
 @media (max-width: 768px) {
-    .upload-btn {
-        padding: 12px 20px;
-        font-size: 14px;
-    }
-
     .toast {
-        top: auto !important;
-        bottom: -100px !important;
+        bottom: -100px;
     }
 
     .toast.show {
-        top: auto !important;
-        bottom: 110px !important;
+        /* Sits above the Capture button and the upload screen's bottom button */
+        bottom: calc(110px + env(safe-area-inset-bottom));
     }
 }
 
 /* Force clicks to register on the button background, not the icon itself */
-#moment-back-btn svg {
+#moment-back-btn svg,
+#moment-share-btn svg {
     pointer-events: none !important;
 }
 

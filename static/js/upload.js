@@ -4,8 +4,8 @@ import {
   map,
   currentUserLat,
   currentUserLon,
-  fetchAllPins,
   fetchSilentGPS,
+  showNewPin,
 } from "./map.js";
 
 const mainCaptureBtn = document.getElementById("main-capture-btn");
@@ -303,9 +303,7 @@ async function processExif(fileToParse) {
         manualSearchWrapper.style.display = "flex";
       }
 
-      btnShareMap.style.display = "flex";
-      btnShareMap.disabled = false;
-      btnShareMap.innerText = "Place this moment";
+      enableShareButton();
       return;
     }
 
@@ -325,7 +323,7 @@ function triggerFallbackLocation(dateToKeep) {
 
   showDatePicker(dateToKeep);
 
-  showToast("No location found in photo.", true);
+  showToast("This photo has no location. Add one to place it.", true);
   manualSearchWrapper.style.display = "flex";
   manualSearch.value = "";
   manualSearchResults.innerHTML = "";
@@ -333,8 +331,21 @@ function triggerFallbackLocation(dateToKeep) {
 
   btnShareMap.style.display = "flex";
   btnShareMap.disabled = true;
-  btnShareMap.innerText = "Select a location first";
+  btnShareMap.innerText = "Choose a location first";
   if (btnLiveLocation) btnLiveLocation.style.display = "flex";
+}
+
+// A location is set: enable the button with a small pulse so the change is noticed
+function enableShareButton() {
+  const wasDisabled = btnShareMap.disabled;
+  btnShareMap.style.display = "flex";
+  btnShareMap.disabled = false;
+  btnShareMap.innerText = "Place on map";
+  if (wasDisabled) {
+    btnShareMap.classList.remove("ready");
+    void btnShareMap.offsetWidth; // restart the animation
+    btnShareMap.classList.add("ready");
+  }
 }
 
 if (closeStagingBtn) {
@@ -349,11 +360,11 @@ if (btnLiveLocation) {
     if (currentUserLat && currentUserLon)
       applyLiveLocation(currentUserLat, currentUserLon);
     else {
-      showToast("Fetching live location...");
+      showToast("Finding your location...");
       navigator.geolocation.getCurrentPosition(
         (pos) => applyLiveLocation(pos.coords.latitude, pos.coords.longitude),
         () =>
-          showToast("Please allow location access to use this feature.", true),
+          showToast("Allow location access to use your current location.", true),
         { enableHighAccuracy: true, timeout: 10000 },
       );
     }
@@ -363,7 +374,7 @@ if (btnLiveLocation) {
 async function applyLiveLocation(lat, lon) {
   finalLat = lat;
   finalLon = lon;
-  manualSearch.value = "Pinpointing location...";
+  manualSearch.value = "Finding your location...";
 
   try {
     const res = await fetch(
@@ -372,15 +383,13 @@ async function applyLiveLocation(lat, lon) {
     const data = await res.json();
     if (data && data.display_name)
       manualSearch.value = data.display_name.split(",").slice(0, 3).join(",");
-    else manualSearch.value = "Current Live Location";
+    else manualSearch.value = "Current location";
   } catch (err) {
-    manualSearch.value = "Current Live Location";
+    manualSearch.value = "Current location";
   }
 
   if (manualSearchResults) manualSearchResults.classList.remove("show");
-  btnShareMap.style.display = "flex";
-  btnShareMap.disabled = false;
-  btnShareMap.innerText = "Upload Here";
+  enableShareButton();
 }
 
 if (manualSearch) {
@@ -391,7 +400,7 @@ if (manualSearch) {
     finalLat = null;
     finalLon = null;
     btnShareMap.disabled = true;
-    btnShareMap.innerText = "Select a location...";
+    btnShareMap.innerText = "Choose a location first";
 
     if (query.length < 3) {
       manualSearchResults.classList.remove("show");
@@ -421,9 +430,7 @@ if (manualSearch) {
             finalLon = parseFloat(place.lon);
             manualSearch.value = item.innerText;
             manualSearchResults.classList.remove("show");
-            btnShareMap.style.display = "flex";
-            btnShareMap.disabled = false;
-            btnShareMap.innerText = "Place this moment";
+            enableShareButton();
           });
           manualSearchResults.appendChild(item);
         });
@@ -436,10 +443,10 @@ if (manualSearch) {
 if (btnShareMap) {
   btnShareMap.addEventListener("click", async () => {
     if (!finalLat || !finalLon)
-      return showToast("Please provide a valid location.", true);
+      return showToast("Choose a location first.", true);
 
     const originalText = btnShareMap.innerText;
-    btnShareMap.innerText = "Saving your moment...";
+    btnShareMap.innerText = "Placing...";
     btnShareMap.disabled = true;
 
     let uploadDate = finalDate;
@@ -468,17 +475,16 @@ if (btnShareMap) {
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable) {
           const percent = Math.round((event.loaded / event.total) * 100);
-          btnShareMap.innerText = `Saving... ${percent}%`;
+          btnShareMap.innerText = `Placing... ${percent}%`;
           btnShareMap.style.backgroundImage = `linear-gradient(to right, rgba(255, 94, 58, 0.9) ${percent}%, rgba(255, 255, 255, 0.1) ${percent}%)`;
         }
       };
 
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
-          btnShareMap.innerText = "Saved!";
-          showToast("Archived successfully.");
-          fetchAllPins();
-          map.flyTo([finalLat, finalLon], 16, { animate: true, duration: 1.5 });
+          btnShareMap.innerText = "Placed!";
+          showToast("Your sky is on the map.");
+          showNewPin(finalLat, finalLon);
           setTimeout(() => {
             stagingArea.classList.remove("show");
             if (topUiLayer) {
@@ -487,20 +493,20 @@ if (btnShareMap) {
             }
           }, 1000);
         } else {
-          showToast("Upload failed.", true);
-          btnShareMap.innerText = "Place this moment";
+          showToast("Couldn't place your sky. Please try again.", true);
+          btnShareMap.innerText = "Place on map";
           btnShareMap.style.backgroundImage = "";
         }
       };
       xhr.onerror = () => {
-        showToast("Network error.", true);
-        btnShareMap.innerText = "Place this moment";
+        showToast("No connection. Please try again.", true);
+        btnShareMap.innerText = "Place on map";
         btnShareMap.style.backgroundImage = "";
       };
       xhr.send(formData);
     } catch (error) {
-      showToast("Upload failed.", true);
-      btnShareMap.innerText = "Place this moment";
+      showToast("Couldn't place your sky. Please try again.", true);
+      btnShareMap.innerText = "Place on map";
       btnShareMap.style.backgroundImage = "";
     }
   });
@@ -545,7 +551,8 @@ export function closeStagingArea() {
   // Do NOT use .destroy() and do NOT clone the input.
   // Just hide the calendar UI and reset the value.
   if (airPickerInstance) {
-    airPickerInstance.hide();
+    // hide() throws if the calendar was never opened
+    if (airPickerInstance.visible) airPickerInstance.hide();
     airPickerInstance.clear();
   }
 
@@ -553,7 +560,7 @@ export function closeStagingArea() {
   if (pickerInput) pickerInput.value = "";
 
   if (btnShareMap) {
-    btnShareMap.innerText = "Place this moment";
+    btnShareMap.innerText = "Place on map";
     btnShareMap.disabled = false;
     btnShareMap.style.background = "";
   }

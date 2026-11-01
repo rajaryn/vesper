@@ -34,13 +34,13 @@ body.dark-mode .drawer-overlay {
     left: 0;
     width: 100%;
     background: rgba(255, 255, 255, 0.85);
-    color: #333;
+    color: var(--text);
     backdrop-filter: blur(40px);
     -webkit-backdrop-filter: blur(40px);
     border-top: 1px solid rgba(255, 255, 255, 0.5);
     z-index: 3500;
-    border-top-left-radius: 30px;
-    border-top-right-radius: 30px;
+    border-top-left-radius: var(--radius-lg);
+    border-top-right-radius: var(--radius-lg);
     padding: 20px 30px 50px 30px;
     box-sizing: border-box;
     transform: translateY(100%);
@@ -54,18 +54,31 @@ body.dark-mode .drawer-overlay {
     transform: translateY(0);
 }
 
+/* Keep the sheet's content a comfortable width on wide screens */
+.about-drawer > * {
+    max-width: 480px;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+#upload-sheet h2 {
+    font-size: var(--text-2xl) !important;
+    font-weight: var(--weight-bold);
+    letter-spacing: -0.02em;
+}
+
 .drawer-handle {
     width: 40px;
     height: 5px;
     background: rgba(0, 0, 0, 0.2);
-    border-radius: 5px;
+    border-radius: var(--radius-pill);
     margin: 0 auto 20px auto;
     cursor: pointer;
 }
 
 body.dark-mode .about-drawer {
     background: rgba(15, 15, 15, 0.85);
-    color: #e0e0e0;
+    color: var(--text);
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.4);
 }
@@ -82,12 +95,13 @@ body.dark-mode .drawer-handle {
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(0, 0, 0, 0.1);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-    color: #333;
+    color: var(--text);
     padding: 15px 30px;
-    border-radius: 30px;
-    font-size: 16px;
-    font-weight: bold;
-    margin-bottom: 15px;
+    border-radius: var(--radius-pill);
+    font: inherit;
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    margin-bottom: 12px;
     cursor: pointer;
     transition: all 0.3s ease;
     display: flex;
@@ -108,14 +122,14 @@ body.dark-mode .drawer-handle {
 
 @media (hover: hover) {
     .action-btn:hover {
-        border-color: #ff5e3a !important;
+        border-color: var(--accent) !important;
         box-shadow: 0 4px 20px rgba(255, 94, 58, 0.2) !important;
         transform: scale(1.02) !important;
     }
 }
 
 .action-btn:active {
-    border-color: #ff5e3a !important;
+    border-color: var(--accent) !important;
     box-shadow: 0 4px 20px rgba(255, 94, 58, 0.2) !important;
     transform: scale(0.98) !important;
     transition: transform 0.1s ease !important;
@@ -164,16 +178,40 @@ body.dark-mode .staging-area {
 }
 
 .staging-close {
-    font-size: 2rem;
-    cursor: pointer;
-    color: inherit;
     width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.staging-close svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.staging-close:hover,
+.staging-close:focus-visible {
+    background: var(--accent-soft);
+    outline: none;
 }
 
 .staging-title {
-    font-size: 1.2rem;
-    font-weight: bold;
-    margin-left: 10px;
+    font-size: var(--text-xl);
+    font-weight: var(--weight-semibold);
+    letter-spacing: -0.01em;
+    margin: 0 0 0 8px;
 }
 
 body.dark-mode .staging-top-bar {
@@ -211,7 +249,7 @@ body.dark-mode .staging-top-bar {
 .preview-img-container {
     width: 100%;
     height: 220px;
-    border-radius: 20px;
+    border-radius: var(--radius-lg);
     overflow: hidden;
     position: relative;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
@@ -235,8 +273,8 @@ body.dark-mode .staging-top-bar {
     background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(12px);
     padding: 8px 12px;
-    border-radius: 20px;
-    font-size: 1rem;
+    border-radius: var(--radius-lg);
+    font-size: var(--text-base);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     z-index: 10;
 }
@@ -265,7 +303,7 @@ body.dark-mode .preview-img-container {
 }
 
 .heic-icon-pulse {
-    color: #ff5e3a;
+    color: var(--accent);
     animation: gentlePulse 3s infinite ease-in-out;
 }
 
@@ -277,13 +315,13 @@ body.dark-mode .preview-img-container {
 
 .heic-filename {
     font-family: monospace;
-    font-size: 1rem;
-    color: #333;
+    font-size: var(--text-base);
+    color: var(--text);
     opacity: 0.9;
 }
 
 .heic-subtext {
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
     color: rgba(0, 0, 0, 0.5);
 }
 
@@ -312,66 +350,46 @@ body.dark-mode .heic-subtext {
     color: rgba(255, 255, 255, 0.5);
 }
 
-/* --- THE UPLOAD BUTTON --- */
+/* --- THE UPLOAD BUTTON (primary action: solid accent) --- */
 .primary-btn,
 #btn-share-map {
-    background: rgba(255, 255, 255, 0.3);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    color: #333333 !important;
-    padding: 15px 30px;
-    border-radius: 30px;
-    font-size: 1rem;
-    font-weight: 600;
+    background: var(--accent);
+    border: none;
+    color: var(--on-accent) !important;
+    padding: 16px 30px;
+    border-radius: var(--radius-pill);
+    font: inherit;
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease;
+    box-shadow: 0 6px 20px var(--accent-glow);
+    transition: background-color 0.2s ease, box-shadow 0.25s ease, transform 0.2s var(--ease);
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-body.dark-mode .primary-btn,
-body.dark-mode #btn-share-map {
-    background: rgba(20, 25, 30, 0.4);
-    border-color: rgba(255, 255, 255, 0.15);
-    color: #e0e0e0 !important;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-}
-
 @media (hover: hover) {
-
     .primary-btn:hover:not(:disabled),
     #btn-share-map:hover:not(:disabled) {
-        border-color: #ff5e3a !important;
-        color: #ff5e3a !important;
-        box-shadow: 0 0 15px rgba(255, 94, 58, 0.4) !important;
-        transform: translateY(-2px);
+        background-color: var(--accent-strong);
+        transform: translateY(-1px);
     }
 }
 
 .primary-btn:active:not(:disabled),
 #btn-share-map:active:not(:disabled) {
-    border-color: #ff5e3a !important;
-    color: #ff5e3a !important;
-    box-shadow: 0 0 15px rgba(255, 94, 58, 0.4) !important;
-    transform: scale(0.95);
+    transform: scale(0.98);
 }
 
 .primary-btn:disabled,
 #btn-share-map:disabled {
-    opacity: 0.6;
+    background: var(--glass-strong);
+    color: var(--text-faint) !important;
+    border: 1px solid var(--glass-border);
     cursor: not-allowed;
-    box-shadow: none !important;
-    transform: none !important;
-    color: #333333 !important;
-}
-
-body.dark-mode .primary-btn:disabled,
-body.dark-mode #btn-share-map:disabled {
-    background: rgba(255, 255, 255, 0.05);
-    color: #888888 !important;
+    box-shadow: none;
+    transform: none;
 }
 
 /* Desktop Staging Tweaks */
@@ -403,8 +421,8 @@ body.dark-mode #btn-share-map:disabled {
 .secondary-action-btn {
     background: transparent;
     border: none;
-    color: var(--text-light);
-    font-size: 0.95rem;
+    color: var(--text);
+    font-size: var(--text-base);
     font-weight: 600;
     cursor: pointer;
     display: flex;
@@ -419,7 +437,7 @@ body.dark-mode #btn-share-map:disabled {
 
 html.dark-mode .secondary-action-btn,
 body.dark-mode .secondary-action-btn {
-    color: var(--text-dark);
+    color: var(--text);
 }
 
 @media (hover: hover) {
@@ -440,19 +458,19 @@ body.dark-mode .secondary-action-btn {
    ============================================== */
 @media (max-width: 768px) {
     #upload-sheet h2 {
-        font-size: 1.15rem !important;
+        font-size: var(--text-xl) !important;
     }
 
     .action-btn {
-        font-size: 15px;
+        font-size: var(--text-base);
         padding: 12px 20px;
     }
 
     .staging-content {
         display: flex;
         flex-direction: column;
-        gap: 15px;
-        padding-bottom: 80px;
+        gap: 14px;
+        padding-bottom: 12px;
         overflow-y: auto;
     }
 
@@ -461,45 +479,46 @@ body.dark-mode .secondary-action-btn {
         display: contents;
     }
 
-    #manual-search-wrapper {
+    /* Photo first, then where and when, then the button */
+    .preview-img-container {
         order: 1;
-        margin-bottom: 0;
+        height: 260px;
+        min-height: 260px;
         flex-shrink: 0;
-        border-radius: 30px !important;
+        margin-bottom: 0;
     }
 
-    #manual-search {
-        -webkit-appearance: none !important;
-        appearance: none !important;
-        border-radius: 30px !important;
+    #manual-search-wrapper {
+        order: 2;
+        /* The search bar is a flex-grow item on the map; here it must keep
+           its own height instead of filling the column */
+        flex: 0 0 auto;
+        min-height: 50px;
+        margin-bottom: 0;
     }
 
     #btn-live-location {
-        order: 2;
-        margin: 0;
-        flex-shrink: 0;
-    }
-
-    #btn-share-map {
         order: 3;
-        margin: 0 0 10px 0;
-        width: 100%;
-        max-width: none;
+        margin: -6px 0 0;
         flex-shrink: 0;
-    }
-
-    .preview-img-container {
-        order: 4;
-        height: 280px;
-        min-height: 280px;
-        flex-shrink: 0;
-        margin-bottom: 0;
     }
 
     #date-picker-container {
-        order: 5;
-        margin: 0;
+        order: 4;
+        margin: 0 !important;
         flex-shrink: 0;
+    }
+
+    /* Always reachable at the bottom of the screen */
+    #btn-share-map {
+        order: 5;
+        position: sticky;
+        bottom: max(12px, env(safe-area-inset-bottom));
+        margin: auto 0 0;
+        width: 100%;
+        max-width: none;
+        flex-shrink: 0;
+        z-index: 5300;
     }
 }
 
@@ -525,25 +544,25 @@ body.dark-mode .secondary-action-btn {
     /* Matches standard search bar padding */
     min-height: 50px;
     /* Forces identical height */
-    border-radius: 30px;
+    border-radius: var(--radius-pill);
     /* Pill shape */
-    font-size: 1rem;
+    font-size: var(--text-base);
     outline: none;
 
     background: rgba(255, 255, 255, 0.4);
     border: 1px solid rgba(255, 255, 255, 0.6);
-    color: #333;
+    color: var(--text);
     transition: all 0.3s ease;
 }
 
 body.dark-mode #vesper-datetime-picker {
     background: rgba(20, 25, 30, 0.4);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #e0e0e0;
+    color: var(--text);
 }
 
 #vesper-datetime-picker:focus {
-    border-color: #ff5e3a;
+    border-color: var(--accent);
     /* Vesper Orange focus state */
 }
 
@@ -554,18 +573,19 @@ body.dark-mode #vesper-datetime-picker {
 
 /* 4. Glass Theme & Colors for the Calendar Popup */
 .air-datepicker {
-    --adp-background-color: rgba(255, 255, 255, 0.85) !important;
+    /* Nearly opaque so the form underneath doesn't show through the calendar */
+    --adp-background-color: rgba(255, 255, 255, 0.97) !important;
     backdrop-filter: blur(20px) saturate(1.8);
     -webkit-backdrop-filter: blur(20px) saturate(1.8);
 
-    --adp-color: #333333;
-    --adp-accent-color: #ff5e3a;
+    --adp-color: var(--text);
+    --adp-accent-color: var(--accent);
     /* Vesper Orange */
-    --adp-day-name-color: #ff5e3a !important;
+    --adp-day-name-color: var(--accent) !important;
     /* Force Day Names to Vesper Orange */
 
     --adp-border-color: rgba(0, 0, 0, 0.08);
-    --adp-border-radius: 24px;
+    --adp-border-radius: var(--radius-lg);
     box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
 
     font-family: inherit;
@@ -576,6 +596,35 @@ body.dark-mode #vesper-datetime-picker {
     --adp-nav-title-bg-hover: rgba(255, 94, 58, 0.1) !important;
     --adp-btn-background-color-hover: rgba(255, 94, 58, 0.1) !important;
     --adp-btn-background-color-active: rgba(255, 94, 58, 0.2) !important;
+
+    /* Time sliders and the highlight behind the hour/minute being changed:
+       the library defaults are a light grey box and blue knobs. !important
+       because the library's stylesheet loads after ours */
+    --adp-background-color-hover: var(--accent-soft) !important;
+    --adp-cell-background-color-selected: var(--accent) !important;
+    --adp-cell-background-color-selected-hover: var(--accent-strong) !important;
+    --adp-time-track-color: var(--border) !important;
+    --adp-time-track-color-hover: var(--accent) !important;
+}
+
+.air-datepicker-time--current-hours,
+.air-datepicker-time--current-minutes {
+    font-family: inherit;
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--weight-semibold);
+    transition: color 0.2s ease;
+}
+
+.air-datepicker-time--current-hours:after,
+.air-datepicker-time--current-minutes:after {
+    border-radius: var(--radius-sm);
+    left: -4px;
+    right: -4px;
+}
+
+.air-datepicker-time--current-hours.-focus-,
+.air-datepicker-time--current-minutes.-focus- {
+    color: var(--accent);
 }
 
 /* Remove Mobile Browser Tap Highlights */
@@ -589,14 +638,14 @@ body.dark-mode #vesper-datetime-picker {
     color: var(--adp-day-name-color) !important;
     font-weight: 700;
     text-transform: uppercase;
-    font-size: 0.7rem;
+    font-size: var(--text-xs);
 }
 
 /* Selected Date Bubble */
 .air-datepicker-cell.-selected- {
-    background: #ff5e3a !important;
+    background: var(--accent) !important;
     color: white !important;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
 }
 
 /* Navigation Buttons Accent */
@@ -606,7 +655,7 @@ body.dark-mode #vesper-datetime-picker {
 
 /* Vesper Time Slider Styling */
 .air-datepicker-time--row input[type='range'] {
-    accent-color: #ff5e3a;
+    accent-color: var(--accent);
     background: transparent !important;
     /* Prevents white background on interaction */
 }
@@ -616,14 +665,14 @@ body.dark-mode #vesper-datetime-picker {
 }
 
 .air-datepicker-time--current-colon {
-    color: #ff5e3a;
-    font-weight: bold;
+    color: var(--accent);
+    font-weight: var(--weight-bold);
 }
 
 /* 5. Dark Mode Overrides for the Calendar Popup */
 body.dark-mode .air-datepicker {
-    --adp-background-color: rgba(20, 25, 30, 0.85) !important;
-    --adp-color: #e0e0e0;
+    --adp-background-color: rgba(24, 27, 31, 0.97) !important;
+    --adp-color: var(--text);
     --adp-border-color: rgba(255, 255, 255, 0.1);
     --adp-cell-background-color-hover: rgba(255, 255, 255, 0.05);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
@@ -662,16 +711,16 @@ body.dark-mode .air-datepicker .adp-time-track {
 
 /* --- TIME PICKER HINT --- */
 .time-hint {
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     text-align: center;
     margin-top: 10px;
-    color: #333;
+    color: var(--text);
     opacity: 0.6;
     font-weight: 600;
     letter-spacing: 0.5px;
 }
 
 body.dark-mode .time-hint {
-    color: #e0e0e0;
+    color: var(--text);
     opacity: 0.5;
 }

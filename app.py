@@ -3,11 +3,12 @@ import io
 import hmac
 import math
 import heapq
+import json
 import urllib.request
 import urllib.error
 from datetime import datetime, timezone
 from flask import Flask, Response, request, jsonify, render_template, send_from_directory 
-from flask import make_response
+from flask import make_response, redirect
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -15,7 +16,7 @@ from PIL import Image
 from db import get_db_connection
 import cloudinary
 import cloudinary.uploader
-from functools import wraps
+from functools import wraps, lru_cache
 from dotenv import load_dotenv
 
 # NEW: Import your modular image utility
@@ -128,9 +129,76 @@ def wake_up():
 # --- Frontend Serving Routes ---
 
 
+def render_app(**context):
+    # Browser-visible by design; restrict it to your domains in the Protomaps dashboard
+    return render_template('index.html', protomaps_key=os.getenv('PROTOMAPS_API_KEY', ''), **context)
+
 @app.route('/', methods=['GET'])
 def index():
-    return render_template('index.html')
+    return render_app()
+
+@lru_cache(maxsize=512)
+def place_name(lat, lon):
+    """'City, State' for link previews; best-effort, cached per pin location."""
+    url = f"https://nominatim.openstreetmap.org/reverse?format=json&zoom=10&lat={lat}&lon={lon}"
+    req = urllib.request.Request(url, headers={"User-Agent": "Vesper/1.0 (link previews)", "Accept-Language": "en"})
+    try:
+        with urllib.request.urlopen(req, timeout=2) as res:
+            address = json.load(res).get('address', {})
+    except Exception as e:
+        print(f"Reverse geocode failed: {type(e).__name__}")
+        return None
+    city = address.get('city') or address.get('town') or address.get('village') or address.get('county')
+    return ', '.join(p for p in (city, address.get('state')) if p) or None
+
+def share_image_url(url):
+    # 1200x630 is the size WhatsApp, X and iMessage previews expect
+    if url and 'cloudinary.com' in url and '/upload/' in url:
+        return url.replace('/upload/', '/upload/w_1200,h_630,c_fill,q_auto,f_jpg/', 1)
+    return url
+
+# Shareable link to a moment: the normal app, plus preview tags and the moment to open
+@app.route('/m/<int:pin_id>', methods=['GET'])
+def shared_moment(pin_id):
+    image_id = request.args.get('img', type=int)
+
+    conn = get_db_connection()
+    if not conn:
+        return render_app()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT id, lat, lon FROM pins WHERE id = %s", (pin_id,))
+        pin = cursor.fetchone()
+        if not pin:
+            return redirect('/')
+        cursor.execute(
+            "SELECT id, file_path, uploaded_at, capture_type FROM images WHERE pin_id = %s ORDER BY uploaded_at DESC",
+            (pin_id,)
+        )
+        images = cursor.fetchall()
+    except Exception as e:
+        print(f"DB ERROR: {e}")
+        return render_app()
+    finally:
+        cursor.close()
+        conn.close()
+
+    if not images:
+        return redirect('/')
+    image = next((img for img in images if img['id'] == image_id), images[0])
+
+    lat, lon = float(pin['lat']), float(pin['lon'])
+    place = place_name(round(lat, 4), round(lon, 4))
+    kind = 'Night sky' if image['capture_type'] == 'moon' else 'Sunset'
+    when = image['uploaded_at'].strftime('%d %b %Y') if isinstance(image['uploaded_at'], datetime) else ''
+    og = {
+        'title': f"{kind} over {place}" if place else f"{kind} on Vesper",
+        'description': ' · '.join(p for p in (when, 'Shared on Vesper, a map of skies people have caught.') if p),
+        'image': share_image_url(image['file_path']),
+        'url': request.url,
+    }
+    shared = {'pinId': pin['id'], 'lat': lat, 'lon': lon, 'imageId': image['id']}
+    return render_app(og=og, shared=shared)
 
 @app.route('/about')
 def about():
@@ -153,57 +221,6 @@ def serve_sw():
 @app.route('/images/<path:filename>')
 def custom_static(filename):
     return send_from_directory('static/images', filename)
-
-import urllib3
-import os
-
-http_pool = urllib3.PoolManager(maxsize=20)
-TILES_CACHE_DIR = os.path.join('static', 'tiles')
-os.makedirs(TILES_CACHE_DIR, exist_ok=True)
-MAX_CACHED_TILES = 20000
-
-# Carto Basemap Tile Proxy (protects CARTO_API_KEY on the backend)
-@app.route('/tiles/<int:z>/<int:x>/<int:y>.png', methods=['GET'])
-def tile_proxy(z, x, y):
-    if not (0 <= z <= 19 and 0 <= x < 2**z and 0 <= y < 2**z):
-        return Response("Invalid tile", status=400, mimetype="text/plain")
-
-    # 1. Check local disk cache first (blazing fast)
-    tile_filename = f"{z}_{x}_{y}.png"
-    tile_path = os.path.join(TILES_CACHE_DIR, tile_filename)
-    
-    if os.path.exists(tile_path):
-        resp = make_response(send_from_directory(TILES_CACHE_DIR, tile_filename))
-        resp.headers['Cache-Control'] = 'public, max-age=864000'
-        return resp
-
-    # 2. If not cached, fetch from Carto
-    carto_key = os.getenv('CARTO_API_KEY', '')
-    subdomain = ['a', 'b', 'c', 'd'][(x + y) % 4]
-    url = f"https://{subdomain}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
-    if carto_key:
-        url += f"?key={carto_key}"
-    
-    try:
-        response = http_pool.request('GET', url, headers={"User-Agent": "Vesper/1.0"}, timeout=5.0)
-        if response.status == 200:
-            # Save to disk cache for future requests (bounded so it can't fill the disk)
-            try:
-                if len(os.listdir(TILES_CACHE_DIR)) < MAX_CACHED_TILES:
-                    with open(tile_path, 'wb') as f:
-                        f.write(response.data)
-            except OSError as e:
-                print(f"Tile cache write failed: {e}")
-                
-            resp = make_response(response.data)
-            resp.headers['Content-Type'] = 'image/png'
-            resp.headers['Cache-Control'] = 'public, max-age=864000'
-            return resp
-        else:
-            return Response("Tile not found", status=response.status, mimetype="text/plain")
-    except Exception as e:
-        print(f"Tile proxy error: {type(e).__name__}")
-        return Response("Tile unavailable", status=502, mimetype="text/plain")
 
 @app.route('/upload', methods=['POST'])
 @limiter.limit("5 per hour; 2 per minute")
@@ -480,4 +497,12 @@ def delete_pin(pin_id):
         conn.close()
 
 if __name__ == '__main__':
-    app.run(debug=os.getenv('FLASK_DEBUG') == '1')
+    # Local dev only (production runs under gunicorn): restart on any change to
+    # Python, templates or static files. The interactive debugger stays opt-in.
+    watched = [
+        os.path.join(root, name)
+        for folder in ('templates', 'static')
+        for root, _, names in os.walk(folder)
+        for name in names
+    ]
+    app.run(debug=os.getenv('FLASK_DEBUG') == '1', use_reloader=True, extra_files=watched)

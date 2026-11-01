@@ -1,7 +1,7 @@
 //Global navigation, Dark mode, Popstate (Back Button), and Top Search bar.
 
 
-import { map } from "./map.js";
+import { map, setMapTheme, flyToGently } from "./map.js";
 import { closeStagingArea } from "./upload.js";
 
 const topUiLayer = document.querySelector(".top-ui-layer");
@@ -33,13 +33,14 @@ export function initThemeLogic() {
 
     if (isDark) {
       body.classList.add("dark-mode");
-      themeToggle.innerHTML = `<span class="menu-icon">${sunIcon}</span> Light Mode`;
-      if (themeMeta) themeMeta.setAttribute("content", "#0d1117");
+      themeToggle.innerHTML = `<span class="menu-icon">${sunIcon}</span> Light mode`;
+      if (themeMeta) themeMeta.setAttribute("content", "#1c1f22");
     } else {
       body.classList.remove("dark-mode");
-      themeToggle.innerHTML = `<span class="menu-icon">${moonIcon}</span> Dark Mode`;
-      if (themeMeta) themeMeta.setAttribute("content", "#fffcfb");
+      themeToggle.innerHTML = `<span class="menu-icon">${moonIcon}</span> Dark mode`;
+      if (themeMeta) themeMeta.setAttribute("content", "#fafaf8");
     }
+    setMapTheme(isDark);
   }
 
   const savedTheme = localStorage.getItem("theme");
@@ -141,12 +142,7 @@ if (globalSearchInput) {
             if (globalSearchResults)
               globalSearchResults.classList.remove("show");
             globalSearchInput.blur();
-            if (map)
-              map.flyTo([lat, lon], 12, {
-                animate: true,
-                duration: 2.0,
-                easeLinearity: 0.25,
-              });
+            if (map) flyToGently([lat, lon], 12);
           });
           if (globalSearchResults) globalSearchResults.appendChild(item);
         });

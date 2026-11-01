@@ -1,7 +1,7 @@
 // Immersive Moment View - 2-State Physics Architecture
 
 import { API_BASE } from "./constants.js";
-import { parseAppDate, fetchWithRetry } from "./utils.js";
+import { parseAppDate, fetchWithRetry, showToast } from "./utils.js";
 
 const momentModal = document.getElementById("moment-modal");
 const momentSlider = document.getElementById("moment-slider");
@@ -10,27 +10,34 @@ const momentTime = document.getElementById("moment-time");
 const momentLiveBadge = document.getElementById("moment-live-badge");
 const momentBackBtn = document.getElementById("moment-back-btn");
 const momentLoader = document.getElementById("moment-loader");
-const momentOverlay = document.querySelector(".moment-overlay");
 const momentThumbnails = document.getElementById("moment-thumbnails"); // Restored Desktop Strip
+const momentShareBtn = document.getElementById("moment-share-btn");
 
+let currentPinId = null;
 let currentMomentData = null;
 let allImages = [];
 let currentImageIndex = 0;
 let isExpanded = false;
 let isDateExpanded = false;
 let bgBlurElement = null;
-let locationHideTimeout;
-let isFirstImage = true;
 
-export async function openMomentView(pinId, lat, lon) {
+// Shareable address of the photo being viewed
+function momentPath() {
+  const path = `/m/${currentPinId}`;
+  return currentMomentData ? `${path}?img=${currentMomentData.id}` : path;
+}
+
+export async function openMomentView(pinId, lat, lon, startImageId = null) {
   if (!momentModal) return;
+  currentPinId = pinId;
+  currentMomentData = null;
 
   // 1. Reset States
   isExpanded = false;
   isDateExpanded = false;
   currentImageIndex = 0;
   momentModal.classList.remove("expanded");
-  history.pushState({ modal: "moment" }, "");
+  history.pushState({ modal: "moment" }, "", momentPath());
   momentModal.classList.add("show");
   document.body.style.overflow = "hidden";
 
@@ -74,6 +81,10 @@ export async function openMomentView(pinId, lat, lon) {
       slide.className = `moment-slide ${idx === 0 ? "active" : ""}`;
 
       const imgEl = document.createElement("img");
+      // Fade in once loaded (see motion.css) instead of painting top-down
+      imgEl.addEventListener("load", () => imgEl.classList.add("loaded"), {
+        once: true,
+      });
       imgEl.src = img.file_path;
       imgEl.loading = "lazy";
       imgEl.draggable = false; // Prevent native browser ghost dragging
@@ -98,12 +109,12 @@ export async function openMomentView(pinId, lat, lon) {
       momentThumbnails.innerHTML = "";
     }
 
-    goToImage(0); // Applies initial BG, UI, and Thumbnails
-
-    // Adjust overlay position based on first image dimensions
-    setTimeout(() => {
-      adjustOverlayForImage();
-    }, 500);
+    // A shared link can point at a specific photo of the pin
+    const startIndex = Math.max(
+      0,
+      images.findIndex((img) => img.id === startImageId),
+    );
+    goToImage(startIndex); // Applies initial BG, UI, and Thumbnails
   } catch (error) {
     console.error("Moment view error:", error);
     closeMomentView();
@@ -111,6 +122,27 @@ export async function openMomentView(pinId, lat, lon) {
 }
 
 // --- STATE MANAGEMENT ---
+
+// The glow is a blurred copy of the photo placed exactly behind it, so its light
+// lines up with the photo's bright spots (a moon, a streetlight). A screen-filling
+// "cover" copy is cropped and stretched differently, which looks off on night skies.
+function alignGlow() {
+  const img = momentSlider.children[currentImageIndex]?.querySelector("img");
+  if (!bgBlurElement || !img) return;
+  if (!img.complete || !img.naturalWidth) {
+    img.addEventListener("load", alignGlow, { once: true });
+    return;
+  }
+  // Layout offsets ignore the slide's scale/translate animation, so these are
+  // where the photo will rest once the slide settles
+  Object.assign(bgBlurElement.style, {
+    left: `${img.offsetLeft}px`,
+    top: `${img.offsetTop}px`,
+    width: `${img.offsetWidth}px`,
+    height: `${img.offsetHeight}px`,
+    opacity: "1",
+  });
+}
 
 function expandViewer() {
   isExpanded = true;
@@ -127,7 +159,11 @@ function collapseViewer() {
 function goToImage(index) {
   currentImageIndex = index;
   currentMomentData = allImages[index];
-  isFirstImage = index === 0;
+
+  // Keep the address bar on the photo being viewed, so copying it shares this one
+  if (history.state?.modal === "moment") {
+    history.replaceState(history.state, "", momentPath());
+  }
 
   // 1. Move Track Smoothly
   const tx = -index * window.innerWidth;
@@ -142,26 +178,31 @@ function goToImage(index) {
     else slide.classList.remove("active");
   });
 
-  // 3. Update Color Extraction Background
+  // 3. Update the glow behind the photo
   if (bgBlurElement && currentMomentData) {
     bgBlurElement.style.backgroundImage = `url('${currentMomentData.file_path}')`;
+    alignGlow();
   }
 
   // 4. Synchronize Desktop Thumbnail Strip
   syncThumbnails(index);
 
-  // 5. Handle Location Visibility - always show on first image
-  const momentHeader = document.querySelector(".moment-header");
-  if (momentHeader) {
-    if (isFirstImage && index === 0) {
-      momentHeader.style.opacity = "1";
-    } else {
-      momentHeader.style.opacity = "0";
-    }
-  }
-
   updateUiForCurrentImage();
-  adjustOverlayForImage();
+
+  // Ease the caption in with each photo
+  const info = momentModal.querySelector(".moment-info");
+  if (info) {
+    info.classList.remove("caption-in");
+    void info.offsetWidth; // restart the animation
+    info.classList.add("caption-in");
+  }
+}
+
+// Expanding/collapsing animates the slide padding, which resizes the photo
+if (momentSlider) {
+  momentSlider.addEventListener("transitionend", (e) => {
+    if (e.propertyName.startsWith("padding")) alignGlow();
+  });
 }
 
 // --- PHYSICS GESTURE ENGINE ---
@@ -185,6 +226,7 @@ if (momentModal) {
       if (
         e.target.closest(".moment-info") ||
         e.target.closest("#moment-back-btn") ||
+        e.target.closest("#moment-share-btn") ||
         e.target.closest(".moment-thumbnails")
       )
         return;
@@ -355,11 +397,11 @@ function syncThumbnails(index) {
   thumbs.forEach((t, i) => {
     if (i === index) {
       t.classList.add("active");
-      // Keep active thumbnail perfectly centered in the strip
-      t.scrollIntoView({
+      // Centre the active thumbnail by scrolling only the strip; scrollIntoView
+      // would also scroll the viewer itself and push the photo off-centre
+      momentThumbnails.scrollTo({
+        left: t.offsetLeft - (momentThumbnails.clientWidth - t.offsetWidth) / 2,
         behavior: "smooth",
-        block: "nearest",
-        inline: "center",
       });
     } else {
       t.classList.remove("active");
@@ -369,52 +411,23 @@ function syncThumbnails(index) {
 
 // --- UI & DATA UTILITIES ---
 
-function adjustOverlayForImage() {
-  if (!currentMomentData || !momentOverlay) return;
-
-  const img = new Image();
-  img.src = currentMomentData.file_path;
-
-  img.onload = function () {
-    const aspectRatio = this.naturalWidth / this.naturalHeight;
-    const screenHeight = window.innerHeight;
-    const screenWidth = window.innerWidth;
-    const screenAspect = screenWidth / screenHeight;
-
-    let bottomPadding;
-    if (aspectRatio > screenAspect) {
-      bottomPadding = screenHeight * 0.15;
-    } else if (aspectRatio > 1) {
-      bottomPadding = screenHeight * 0.25;
-    } else {
-      bottomPadding = screenHeight * 0.2;
-    }
-
-    momentOverlay.style.paddingBottom = `${bottomPadding}px`;
-  };
-}
-
 function updateUiForCurrentImage() {
   if (!currentMomentData) return;
 
   const captureType =
-    currentMomentData.capture_type === "moon" ? "Night Sky" : "Sunset";
+    currentMomentData.capture_type === "moon" ? "Night sky" : "Sunset";
   const uploadDate = parseAppDate(currentMomentData.uploaded_at);
 
-  // Always show date - no toggle functionality
   const smartDate = getSmartDate(currentMomentData.uploaded_at);
   const timeStr = uploadDate.toLocaleString(undefined, {
     hour: "numeric",
     minute: "2-digit",
   });
 
-  // Base HTML string
-  let timeHtml = `${timeStr} <span class="moment-capture-type">${captureType}</span> · <span class="moment-date">${smartDate}</span>`;
-
-  // MINIMAL INLINE ADDITION: Show "+X more" cleanly beside the date ONLY on the first image
-  if (allImages.length > 1 && currentImageIndex === 0) {
-    const extraCount = allImages.length - 1;
-    timeHtml += ` · <span style="opacity: 0.65; font-weight: 500;">+${extraCount} more</span>`;
+  // Type, then when; a position counter when the spot has several photos
+  let timeHtml = `<span class="moment-capture-type">${captureType}</span><span class="moment-when">${smartDate} · ${timeStr}</span>`;
+  if (allImages.length > 1) {
+    timeHtml += `<span class="moment-count">${currentImageIndex + 1} / ${allImages.length}</span>`;
   }
 
   momentTime.innerHTML = timeHtml;
@@ -485,6 +498,39 @@ function isWithin24Hours(date) {
   return diffMs / (1000 * 60 * 60) <= 24;
 }
 
+// --- SHARING ---
+
+async function shareCurrentMoment() {
+  if (!currentMomentData) return;
+  const url = window.location.origin + momentPath();
+  const kind = currentMomentData.capture_type === "moon" ? "Night sky" : "Sunset";
+  const place = momentLocation.textContent;
+  const title =
+    place && place !== "Unknown Location" ? `${kind} over ${place}` : `${kind} on Vesper`;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title, url });
+      return;
+    } catch (err) {
+      if (err.name === "AbortError") return; // User closed the share sheet
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast("Link copied.");
+  } catch (err) {
+    showToast("Couldn't copy the link.", true);
+  }
+}
+
+if (momentShareBtn) {
+  momentShareBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    shareCurrentMoment();
+  });
+}
+
 // --- TEARDOWN ---
 
 export function closeMomentView() {
@@ -492,11 +538,20 @@ export function closeMomentView() {
 
   momentModal.classList.remove("show");
   document.body.style.overflow = "";
+  // The map uses this to fly back out to where you were before the pin tap
+  window.dispatchEvent(new Event("moment:closed"));
+  // Leave the moment's /m/ address once it's closed (e.g. if it failed to load)
+  if (window.location.pathname.startsWith("/m/")) {
+    history.replaceState({}, "", "/");
+  }
 
   setTimeout(() => {
     momentSlider.innerHTML = "";
     if (momentThumbnails) momentThumbnails.innerHTML = "";
-    if (bgBlurElement) bgBlurElement.style.backgroundImage = "none";
+    if (bgBlurElement) {
+      bgBlurElement.style.backgroundImage = "none";
+      bgBlurElement.style.opacity = "0";
+    }
     allImages = [];
     currentMomentData = null;
   }, 400);
@@ -523,11 +578,9 @@ window.addEventListener("resize", () => {
     const tx = -currentImageIndex * window.innerWidth;
     momentSlider.style.transition = "none";
     momentSlider.style.transform = `translateX(${tx}px)`;
+    alignGlow();
 
-    // 2. Recalculate dynamic overlay padding
-    adjustOverlayForImage();
-
-    // 3. Re-evaluate headers/thumbnails based on new dimensions
+    // 2. Re-evaluate headers/thumbnails based on new dimensions
     if (
       window.innerWidth > 768 &&
       momentThumbnails.children.length === 0 &&
@@ -556,11 +609,7 @@ document.addEventListener(
         closeMomentView();
 
         // Fix history state to prevent users from getting trapped
-        if (history.state && history.state.modal === "moment") {
-          history.replaceState({}, "", window.location.pathname);
-        } else {
-          history.replaceState({}, "", window.location.pathname);
-        }
+        history.replaceState({}, "", "/");
       }
     }
   },

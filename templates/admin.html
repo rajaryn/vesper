@@ -113,7 +113,7 @@
                     
                     let imagesHtml = images.map(img => `
                         <div class="image-item" id="img-${img.id}">
-                            <img src="${esc(img.file_path)}" alt="Sunset">
+                            <img src="${esc(img.file_path)}" alt="Sky photo">
                             <button class="delete-img-btn" onclick="deleteImage(${img.id})">&times;</button>
                         </div>
                     `).join('');

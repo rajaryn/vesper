@@ -1,4 +1,4 @@
-const CACHE_NAME = "vesper-cache-v72";
+const CACHE_NAME = "vesper-cache-v79";
 
 const ASSETS_TO_CACHE = [
   "/",
@@ -15,6 +15,10 @@ const ASSETS_TO_CACHE = [
 
   "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
   "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
+  "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css",
+  "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js",
+  "https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js",
+  "https://unpkg.com/@protomaps/basemaps@5/dist/basemaps.js",
 ];
 
 self.addEventListener("install", (event) => {
@@ -76,7 +80,9 @@ self.addEventListener("fetch", (event) => {
   if (
     url.pathname.startsWith("/pins") ||
     url.pathname.startsWith("/upload") ||
-    url.pathname.startsWith("/static/images/")
+    url.pathname.startsWith("/static/images/") ||
+    // Vector tiles: leave to the HTTP cache so Cache Storage doesn't grow forever
+    url.hostname === "api.protomaps.com"
   ) {
     return;
   }

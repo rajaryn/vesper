@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Privacy Policy - Vesper</title>
-    <meta name="theme-color" content="#fffcfb">
-    
+    <title>Privacy policy - Vesper</title>
+    <meta name="theme-color" content="#fafaf8">
+
     <script>
+        // Apply the saved theme before first paint so the page doesn't flash
         const savedTheme = localStorage.getItem("theme");
         const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
         if (savedTheme === "dark" || (!savedTheme && systemPrefersDark)) {
@@ -14,278 +15,10 @@
         }
     </script>
 
-    <style>
-        /* --- GLOBAL BASE --- */
-        :root {
-            --accent: #ff5e3a;
-            --text-light: #333333;
-            --text-dark: #f8f9fa;
-        }
-
-        body, html {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            min-height: 100dvh;
-            color: var(--text-light);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            -webkit-font-smoothing: antialiased;
-            
-            /* Allow scrolling for the policy page */
-            overflow-x: hidden;
-            overflow-y: auto;
-        }
-
-        html.dark-mode body {
-            color: var(--text-dark);
-        }
-
-        /* --- PAGE TRANSITION CURTAIN --- */
-        .page-curtain {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: #fffcfb; 
-            z-index: 99999;
-            pointer-events: none;
-            opacity: 1;
-            transition: opacity 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-        }
-
-        html.dark-mode .page-curtain {
-            background-color: #0d1117; 
-        }
-
-        .page-curtain.reveal {
-            opacity: 0;
-        }
-
-        /* --- IMMERSIVE BACKGROUNDS --- */
-        .bg-layer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-size: cover;
-            background-position: center;
-            z-index: -2;
-            transition: opacity 1s cubic-bezier(0.25, 0.8, 0.25, 1), transform 10s linear;
-            will-change: opacity, transform;
-        }
-
-        /* Using slightly calmer, atmospheric Unsplash images for the legal page */
-        .bg-sunset {
-            background-image: url('https://images.unsplash.com/photo-1476610182048-b716b8518aae?q=80&w=2000&auto=format&fit=crop');
-            opacity: 1;
-            transform: scale(1.05);
-        }
-
-        .bg-night {
-            background-image: url('https://images.unsplash.com/photo-1465101162946-4377e57745c3?q=80&w=2000&auto=format&fit=crop');
-            opacity: 0;
-            transform: scale(1);
-        }
-
-        html.dark-mode .bg-sunset { opacity: 0; transform: scale(1); }
-        html.dark-mode .bg-night { opacity: 1; transform: scale(1.05); }
-
-        /* Darkening overlay for text legibility */
-        .bg-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: linear-gradient(to bottom, rgba(255,255,255,0.4), rgba(255,255,255,0.8));
-            z-index: -1;
-            transition: background 1s ease;
-        }
-
-        html.dark-mode .bg-overlay {
-            background: linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0.85));
-        }
-
-        /* --- TOP NAVIGATION --- */
-        .nav-container {
-            width: 100%; 
-            padding: max(20px, env(safe-area-inset-top)) 20px 0 20px;
-            box-sizing: border-box; 
-            display: flex; 
-            justify-content: space-between;
-            max-width: 800px; 
-            z-index: 10;
-            position: relative;
-        }
-        
-        .glass-pill {
-            background: rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.6); 
-            color: #333333 !important; 
-            padding: 10px 18px; 
-            border-radius: 30px; 
-            font-weight: 600; 
-            text-decoration: none;
-            font-size: 0.95rem; 
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
-            display: inline-flex; 
-            align-items: center; 
-            gap: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            cursor: pointer;
-            outline: none;
-        }
-        
-        html.dark-mode .glass-pill { 
-            background: rgba(20, 25, 30, 0.5);
-            border-color: rgba(255, 255, 255, 0.15); 
-            color: #e0e0e0 !important;
-        }
-        
-        @media (hover: hover) {
-            .glass-pill:hover { 
-                border-color: var(--accent) !important; 
-                color: var(--accent) !important;
-                transform: translateY(-2px); 
-            }
-        }
-        
-        .glass-pill:active { 
-            transform: scale(0.96); 
-        }
-
-        /* --- MAIN CONTENT & SCROLLABLE CARD --- */
-        .content-wrapper {
-            flex-grow: 1; 
-            width: 100%; 
-            max-width: 700px; 
-            padding: 30px 20px 60px 20px; 
-            box-sizing: border-box;
-            z-index: 10;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .frosted-document {
-            padding: 50px 45px;
-            border-radius: 32px;
-            text-align: left; /* Left aligned for easier reading */
-            
-            /* Opaque enough to read, translucent enough to feel native */
-            background: rgba(255, 255, 255, 0.75);
-            backdrop-filter: blur(30px) saturate(1.5);
-            -webkit-backdrop-filter: blur(30px) saturate(1.5);
-            border: 1px solid rgba(255, 255, 255, 0.9);
-            
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.1); 
-            will-change: transform, opacity;
-            
-            /* Entrance Animation */
-            opacity: 0; 
-            transform: translateY(30px) scale(0.98);
-            animation: floatUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s forwards;
-        }
-
-        html.dark-mode .frosted-document {
-            background: rgba(20, 25, 30, 0.75);
-            border-color: rgba(255, 255, 255, 0.15);
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4); 
-        }
-
-        @keyframes floatUp { 
-            to { opacity: 1; transform: translateY(0) scale(1); } 
-        }
-
-        /* --- TYPOGRAPHY & SECTIONS --- */
-        h1 { 
-            font-size: 2.5rem; 
-            margin: 0 0 10px 0; 
-            font-weight: 800; 
-            letter-spacing: -0.5px; 
-            text-align: center;
-        }
-
-        .subtitle {
-            text-align: center;
-            font-size: 1.05rem;
-            opacity: 0.7;
-            margin-bottom: 40px;
-            font-weight: 500;
-        }
-
-        .policy-section {
-            margin-bottom: 35px;
-            display: flex;
-            gap: 18px;
-            align-items: flex-start;
-        }
-
-        .policy-section:last-child {
-            margin-bottom: 0;
-        }
-
-        .policy-icon {
-            flex-shrink: 0;
-            width: 44px;
-            height: 44px;
-            background: rgba(255, 94, 58, 0.15);
-            color: var(--accent);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .policy-icon svg {
-            width: 22px;
-            height: 22px;
-            stroke-width: 2;
-        }
-
-        .policy-content h3 {
-            margin: 0 0 8px 0;
-            font-size: 1.25rem;
-            font-weight: 700;
-        }
-
-        .policy-content p {
-            margin: 0;
-            font-size: 1rem;
-            line-height: 1.6;
-            opacity: 0.85;
-        }
-
-        .footer-note {
-            margin-top: 40px;
-            padding-top: 30px;
-            border-top: 1px solid rgba(0,0,0,0.1);
-            text-align: center;
-            font-size: 0.9rem;
-            opacity: 0.6;
-        }
-
-        html.dark-mode .footer-note {
-            border-top-color: rgba(255,255,255,0.1);
-        }
-
-        /* --- MOBILE RESPONSIVENESS --- */
-        @media (max-width: 600px) {
-            .content-wrapper { padding: 20px 15px 40px 15px; }
-            .frosted-document { padding: 40px 20px; border-radius: 28px; }
-            h1 { font-size: 2.2rem; }
-            .policy-section { flex-direction: column; gap: 12px; margin-bottom: 30px; }
-            .policy-icon { width: 36px; height: 36px; }
-            .policy-icon svg { width: 18px; height: 18px; }
-            .policy-content h3 { font-size: 1.15rem; }
-            .policy-content p { font-size: 0.95rem; }
-            .glass-pill { padding: 8px 14px; font-size: 0.9rem; }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css') }}?v=1">
 </head>
-<body>
+<body class="page-privacy">
 
     <div id="page-curtain" class="page-curtain"></div>
 
@@ -295,130 +28,82 @@
 
     <nav class="nav-container">
         <a href="/" class="glass-pill smooth-nav">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
                 <line x1="19" y1="12" x2="5" y2="12"></line>
                 <polyline points="12 19 5 12 12 5"></polyline>
             </svg>
             Map
         </a>
-        
-        <button id="policy-theme-toggle" class="glass-pill">
-            </button>
+
+        <button type="button" id="page-theme-toggle" class="glass-pill"></button>
     </nav>
 
     <main class="content-wrapper">
-        <div class="frosted-document">
-            <h1>Privacy Policy</h1>
-            <div class="subtitle">Clear, simple, and transparent.</div>
+        <article class="card">
+            <h1>Privacy policy</h1>
+            <p class="subtitle">Clear, simple, and transparent.</p>
 
-            <div class="policy-section">
+            <section class="policy-section">
                 <div class="policy-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                         <circle cx="12" cy="7" r="4"></circle>
-                        <line x1="4" y1="4" x2="20" y2="20" stroke="#ff5e3a"></line>
+                        <line x1="4" y1="4" x2="20" y2="20"></line>
                     </svg>
                 </div>
                 <div class="policy-content">
-                    <h3>No Sign-ups Required</h3>
+                    <h2>No sign-ups required</h2>
                     <p>We do not ask for your name, email, phone number, or a password. You do not need to create an account to explore the map or share your sky. Vesper is completely anonymous by design.</p>
                 </div>
-            </div>
+            </section>
 
-            <div class="policy-section">
+            <section class="policy-section">
                 <div class="policy-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
                         <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
                     </svg>
                 </div>
                 <div class="policy-content">
-                    <h3>On-Demand Location Only</h3>
+                    <h2>On-demand location only</h2>
                     <p>We <strong>do not</strong> track your location in the background. We only request your GPS coordinates at the exact moment you upload a photo, and strictly to determine where to drop the pin on the public map.</p>
                 </div>
-            </div>
+            </section>
 
-            <div class="policy-section">
+            <section class="policy-section">
                 <div class="policy-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
                         <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
                         <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
                         <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
                     </svg>
                 </div>
                 <div class="policy-content">
-                    <h3>Where Your Data Lives</h3>
-                    <p>The images you upload are hosted securely on <strong>Cloudinary</strong>. The associated metadata—such as the capture time, the exact coordinates of the pin, and the type of sky—is stored in our fast, decentralized <strong>TiDB</strong> database.</p>
+                    <h2>Where your data lives</h2>
+                    <p>The images you upload are hosted securely on <strong>Cloudinary</strong>. The associated metadata—such as the capture time, the exact coordinates of the pin, and the type of sky—is stored in a <strong>MySQL</strong> database on Oracle Cloud (HeatWave).</p>
                 </div>
-            </div>
+            </section>
 
-            <div class="policy-section">
+            <section class="policy-section">
                 <div class="policy-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                         <line x1="9" y1="9" x2="15" y2="15"></line>
                         <line x1="15" y1="9" x2="9" y2="15"></line>
                     </svg>
                 </div>
                 <div class="policy-content">
-                    <h3>Moderation & Deletion</h3>
+                    <h2>Moderation &amp; deletion</h2>
                     <p>Vesper is a public, shared space intended for skies, sunsets, and atmospheric moments. To keep the map beautiful and safe for everyone, administrators reserve the right to review and permanently delete any uploaded image at any time without notice.</p>
                 </div>
-            </div>
+            </section>
 
-            <div class="footer-note">
-                Last updated: April 2026<br>
+            <p class="footer-note">
+                Last updated: November 2026<br>
                 By using Vesper, you agree to these terms.
-            </div>
-        </div>
+            </p>
+        </article>
     </main>
 
-    <script>
-        // --- Standalone Theme Toggle Logic ---
-        const themeBtn = document.getElementById('policy-theme-toggle');
-        const sunSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg> Light`;
-        const moonSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg> Dark`;
-
-        function updateThemeIcon() {
-            const isDark = document.documentElement.classList.contains('dark-mode');
-            themeBtn.innerHTML = isDark ? sunSvg : moonSvg;
-            
-            // Update meta theme color to match the curtain transition
-            const themeMeta = document.querySelector('meta[name="theme-color"]');
-            if (themeMeta) {
-                themeMeta.setAttribute("content", isDark ? "#0d1117" : "#fffcfb");
-            }
-        }
-
-        themeBtn.addEventListener('click', () => {
-            const isDark = document.documentElement.classList.toggle('dark-mode');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            updateThemeIcon();
-        });
-
-        // Initialize theme icon on load
-        updateThemeIcon();
-
-        // --- PAGE TRANSITION LOGIC ---
-        // Fade in when the page loads
-        window.addEventListener('load', () => {
-            const curtain = document.getElementById('page-curtain');
-            if (curtain) curtain.classList.add('reveal');
-        });
-
-        // Fade out before navigating away via the Back button
-        document.querySelectorAll('.smooth-nav').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const targetUrl = e.currentTarget.href;
-                const curtain = document.getElementById('page-curtain');
-                
-                if (curtain) curtain.classList.remove('reveal');
-                
-                setTimeout(() => {
-                    window.location.href = targetUrl;
-                }, 400); // Wait for the fade
-            });
-        });
-    </script>
+    <script src="{{ url_for('static', filename='js/pages.js') }}?v=1"></script>
 </body>
 </html>
