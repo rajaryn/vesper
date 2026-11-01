@@ -9,6 +9,10 @@ html {
     height: 100%;
     background-color: var(--bg);
     color: var(--text);
+    /* The app is one full-screen map: the page itself never scrolls or
+       rubber-bands. Sheets, the menu and the upload screen scroll inside. */
+    overflow: hidden;
+    overscroll-behavior: none;
     transition: background-color 0.5s ease, color 0.5s ease;
 }
 
@@ -17,6 +21,7 @@ html {
     top: 0;
     left: 0;
     height: 100vh;
+    height: 100dvh;
     width: 100vw;
     z-index: 1;
     background-color: var(--bg);
@@ -65,6 +70,7 @@ body.dark-mode .leaflet-control-zoom-out {
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     background-color: var(--bg);
     z-index: 99999;
     pointer-events: none;

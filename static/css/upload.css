@@ -9,6 +9,7 @@
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -701,8 +702,8 @@ body.dark-mode .air-datepicker .adp-time-track {
         bottom: auto !important;
         left: 50% !important;
         transform: translate(-50%, -50%) !important;
-        max-height: calc(100dvh - 30px) !important;
         max-height: calc(100vh - 30px) !important;
+        max-height: calc(100dvh - 30px) !important;
         overflow-y: auto !important;
         box-sizing: border-box !important;
         z-index: 99999 !important;

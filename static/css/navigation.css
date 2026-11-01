@@ -157,6 +157,7 @@
     left: -320px;
     width: 280px;
     height: 100vh;
+    height: 100dvh;
     background: rgba(255, 255, 255, 0.25);
     backdrop-filter: blur(40px);
     -webkit-backdrop-filter: blur(40px);
@@ -167,6 +168,9 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    /* Short screens scroll the menu itself, never the page behind it */
+    overflow-y: auto;
+    overscroll-behavior: contain;
     box-shadow: 10px 0 40px rgba(0, 0, 0, 0.15);
     opacity: 0;
     visibility: hidden;

@@ -123,6 +123,7 @@
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     z-index: 3000;
     display: flex;
     align-items: center;
@@ -272,6 +273,7 @@ body.dark-mode .lightbox-date {
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     background: #000;
     z-index: 4000;
     display: flex;
