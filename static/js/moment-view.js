@@ -27,7 +27,8 @@ function momentPath() {
   return currentMomentData ? `${path}?img=${currentMomentData.id}` : path;
 }
 
-export async function openMomentView(pinId, lat, lon, startImageId = null) {
+// placeName is the pin's stored name; without one, it's looked up live
+export async function openMomentView(pinId, lat, lon, startImageId = null, placeName = null) {
   if (!momentModal) return;
   currentPinId = pinId;
   currentMomentData = null;
@@ -98,7 +99,7 @@ export async function openMomentView(pinId, lat, lon, startImageId = null) {
       momentLoader.style.display = "none";
     }, 400);
 
-    const locationName = await fetchLocationName(lat, lon);
+    const locationName = placeName || (await fetchLocationName(lat, lon));
     momentLocation.textContent = locationName;
 
     // Build the Desktop Thumbnail Strip
@@ -473,21 +474,36 @@ function getSmartDate(uploadedAt) {
   }
 }
 
+// "Area, City" from an OpenStreetMap address, e.g. "Colaba, Mumbai".
+// Mirrors place_name() in app.py, which titles link previews.
+function formatPlace(address) {
+  // Some big cities (Mumbai) only appear as a district, e.g. "Mumbai City District"
+  const district = (address.state_district || "")
+    .replace(/\s+(City\s+)?District$|\s+Suburban$/i, "")
+    .trim();
+  const city =
+    address.city || address.town || address.village || address.municipality ||
+    district || address.county;
+  // Skip admin units like "A Ward" that nobody would recognise as a place
+  const area = [address.suburb, address.neighbourhood, address.quarter, address.hamlet]
+    .find((name) => name && !/\bward\b/i.test(name));
+  const state = address.state;
+
+  if (area && city && area !== city) return `${area}, ${city}`;
+  if (area && !city) return state ? `${area}, ${state}` : area;
+  // No area: add the state for context, unless it just repeats the city ("Delhi, Delhi")
+  if (city) return state && !state.includes(city) && !city.includes(state) ? `${city}, ${state}` : city;
+  return state || address.country || null;
+}
+
 async function fetchLocationName(lat, lon) {
   try {
+    // zoom=16 fills in city and area reliably; the label never uses the street
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`,
+      `https://nominatim.openstreetmap.org/reverse?format=json&zoom=16&accept-language=en&lat=${lat}&lon=${lon}`,
     );
     const data = await res.json();
-    if (data && data.address) {
-      const parts = [];
-      if (data.address.city) parts.push(data.address.city);
-      else if (data.address.town) parts.push(data.address.town);
-      else if (data.address.village) parts.push(data.address.village);
-      if (data.address.state) parts.push(data.address.state);
-      return parts.join(", ") || "Unknown Location";
-    }
-    return "Unknown Location";
+    return (data && data.address && formatPlace(data.address)) || "Unknown Location";
   } catch (err) {
     return "Unknown Location";
   }

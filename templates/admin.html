@@ -75,6 +75,34 @@
             cursor: pointer;
         }
         .delete-img-btn:hover { background: #ff3a3a; }
+        .place-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            align-items: center;
+        }
+        .place-input {
+            width: 320px;
+            max-width: 60vw;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.06);
+            color: #fff;
+            font: inherit;
+        }
+        .place-input:focus { outline: none; border-color: #ff5e3a; }
+        .save-btn {
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 94, 58, 0.5);
+            background: rgba(255, 94, 58, 0.15);
+            color: #ff5e3a;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .save-btn:hover { background: #ff5e3a; color: #fff; }
+        .save-status { font-size: 0.85rem; color: #8fd18f; }
     </style>
 </head>
 <body>
@@ -123,6 +151,13 @@
                             <div>
                                 <strong>Pin #${pin.id}</strong><br>
                                 <small>Lat: ${parseFloat(pin.lat).toFixed(4)}, Lon: ${parseFloat(pin.lon).toFixed(4)}</small>
+                                <div class="place-row">
+                                    <input class="place-input" id="place-${pin.id}" maxlength="120"
+                                        placeholder="Place name (shown on photos and shared links)"
+                                        value="${esc(pin.place_name || '')}">
+                                    <button class="save-btn" onclick="savePlaceName(${pin.id})">Save</button>
+                                    <span class="save-status" id="place-status-${pin.id}"></span>
+                                </div>
                             </div>
                             <button class="danger-btn" onclick="deletePin(${pin.id})">Delete Entire Pin</button>
                         </div>
@@ -142,6 +177,23 @@
             const res = await fetch(`${API_BASE}/admin/image/${imageId}`, { method: 'DELETE' });
             if (res.ok) document.getElementById(`img-${imageId}`).remove();
             else alert("Failed to delete image.");
+        }
+
+        async function savePlaceName(pinId) {
+            const input = document.getElementById(`place-${pinId}`);
+            const status = document.getElementById(`place-status-${pinId}`);
+            const res = await fetch(`${API_BASE}/admin/pin/${pinId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ place_name: input.value }),
+            });
+            if (res.ok) {
+                status.textContent = 'Saved';
+                setTimeout(() => (status.textContent = ''), 2000);
+            } else {
+                const err = await res.json().catch(() => ({}));
+                alert(err.error || 'Failed to save the name.');
+            }
         }
 
         async function deletePin(pinId) {

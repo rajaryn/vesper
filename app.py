@@ -4,6 +4,7 @@ import hmac
 import math
 import heapq
 import json
+import re
 import urllib.request
 import urllib.error
 from datetime import datetime, timezone
@@ -52,8 +53,12 @@ cloudinary.config(
 
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024 # Limit uploads to 5MB
 
-# Helper: Haversine distance
 ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif'}
+
+# A new photo joins an existing pin if it was taken within this distance of it
+PIN_MATCH_RADIUS_KM = 0.15
+
+# Helper: Haversine distance
 
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371.0 # Earth radius in kilometers
@@ -137,10 +142,34 @@ def render_app(**context):
 def index():
     return render_app()
 
+def format_place(address):
+    """'Area, City' from an OpenStreetMap address, e.g. 'Colaba, Mumbai'.
+    Mirrors formatPlace() in static/js/moment-view.js."""
+    # Some big cities (Mumbai) only appear as a district, e.g. 'Mumbai City District'
+    district = re.sub(r'\s+(City\s+)?District$|\s+Suburban$', '', address.get('state_district', ''), flags=re.I).strip()
+    city = (address.get('city') or address.get('town') or address.get('village')
+            or address.get('municipality') or district or address.get('county'))
+    # Skip admin units like 'A Ward' that nobody would recognise as a place
+    area = next((name for key in ('suburb', 'neighbourhood', 'quarter', 'hamlet')
+                 if (name := address.get(key)) and not re.search(r'\bward\b', name, re.I)), None)
+    state = address.get('state')
+
+    if area and city and area != city:
+        return f"{area}, {city}"
+    if area and not city:
+        return f"{area}, {state}" if state else area
+    # No area: add the state for context, unless it just repeats the city ('Delhi, Delhi')
+    if city:
+        return f"{city}, {state}" if state and state not in city and city not in state else city
+    return state or address.get('country')
+
 @lru_cache(maxsize=512)
 def place_name(lat, lon):
-    """'City, State' for link previews; best-effort, cached per pin location."""
-    url = f"https://nominatim.openstreetmap.org/reverse?format=json&zoom=10&lat={lat}&lon={lon}"
+    """Look up a place label for a spot; best-effort, cached per location.
+    Used once when a pin is created (the result is stored in pins.place_name),
+    and as a fallback for pins that don't have a stored name yet."""
+    # zoom=16 fills in city and area reliably; the label never uses the street
+    url = f"https://nominatim.openstreetmap.org/reverse?format=json&zoom=16&lat={lat}&lon={lon}"
     req = urllib.request.Request(url, headers={"User-Agent": "Vesper/1.0 (link previews)", "Accept-Language": "en"})
     try:
         with urllib.request.urlopen(req, timeout=2) as res:
@@ -148,8 +177,7 @@ def place_name(lat, lon):
     except Exception as e:
         print(f"Reverse geocode failed: {type(e).__name__}")
         return None
-    city = address.get('city') or address.get('town') or address.get('village') or address.get('county')
-    return ', '.join(p for p in (city, address.get('state')) if p) or None
+    return format_place(address)
 
 def share_image_url(url):
     # 1200x630 is the size WhatsApp, X and iMessage previews expect
@@ -167,7 +195,7 @@ def shared_moment(pin_id):
         return render_app()
     cursor = conn.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT id, lat, lon FROM pins WHERE id = %s", (pin_id,))
+        cursor.execute("SELECT id, lat, lon, place_name FROM pins WHERE id = %s", (pin_id,))
         pin = cursor.fetchone()
         if not pin:
             return redirect('/')
@@ -188,7 +216,7 @@ def shared_moment(pin_id):
     image = next((img for img in images if img['id'] == image_id), images[0])
 
     lat, lon = float(pin['lat']), float(pin['lon'])
-    place = place_name(round(lat, 4), round(lon, 4))
+    place = pin['place_name'] or place_name(round(lat, 4), round(lon, 4))
     kind = 'Night sky' if image['capture_type'] == 'moon' else 'Sunset'
     when = image['uploaded_at'].strftime('%d %b %Y') if isinstance(image['uploaded_at'], datetime) else ''
     og = {
@@ -197,7 +225,7 @@ def shared_moment(pin_id):
         'image': share_image_url(image['file_path']),
         'url': request.url,
     }
-    shared = {'pinId': pin['id'], 'lat': lat, 'lon': lon, 'imageId': image['id']}
+    shared = {'pinId': pin['id'], 'lat': lat, 'lon': lon, 'imageId': image['id'], 'placeName': place}
     return render_app(og=og, shared=shared)
 
 @app.route('/about')
@@ -256,13 +284,16 @@ def upload():
         return jsonify({'error': 'Missing required data'}), 400
 
     try:
-        lat = round(float(lat_str), 3)
-        lon = round(float(lon_str), 3)
+        exact_lat = float(lat_str)
+        exact_lon = float(lon_str)
     except ValueError:
         return jsonify({'error': 'Invalid coordinates format'}), 400
 
-    if not (math.isfinite(lat) and math.isfinite(lon) and -90 <= lat <= 90 and -180 <= lon <= 180):
+    if not (math.isfinite(exact_lat) and math.isfinite(exact_lon) and -90 <= exact_lat <= 90 and -180 <= exact_lon <= 180):
         return jsonify({'error': 'Coordinates out of range'}), 400
+    # Pins are stored to 3 decimals (~100 m); matching below uses the exact spot
+    lat = round(exact_lat, 3)
+    lon = round(exact_lon, 3)
 
     # Verify the bytes really are an image (extension alone is not trusted)
     ext = os.path.splitext(file.filename.lower())[1]
@@ -314,15 +345,31 @@ def upload():
 
     cursor = conn.cursor(dictionary=True)
     try:
-        # Check if pin exists
-        cursor.execute("SELECT id FROM pins WHERE lat = %s AND lon = %s", (lat, lon))
-        pin = cursor.fetchone()
+        # Join the nearest pin within PIN_MATCH_RADIUS_KM, so photos taken a short
+        # walk apart share one pin (exact-match on rounded coordinates split them
+        # whenever they fell either side of a ~100 m grid line)
+        # Cheap pre-filter box, comfortably wider than the radius (degrees of
+        # longitude shrink towards the poles, so widen that side to match)
+        box_lat = 0.003
+        box_lon = box_lat / max(math.cos(math.radians(exact_lat)), 0.1)
+        cursor.execute(
+            "SELECT id, lat, lon FROM pins WHERE lat BETWEEN %s AND %s AND lon BETWEEN %s AND %s",
+            (exact_lat - box_lat, exact_lat + box_lat, exact_lon - box_lon, exact_lon + box_lon),
+        )
+        nearby = [
+            (haversine(exact_lat, exact_lon, float(p['lat']), float(p['lon'])), p['id'])
+            for p in cursor.fetchall()
+        ]
+        nearest = min(nearby, default=None)
 
-        if pin:
-            pin_id = pin['id']
+        if nearest and nearest[0] <= PIN_MATCH_RADIUS_KM:
+            pin_id = nearest[1]
         else:
-            # Create new pin
-            cursor.execute("INSERT INTO pins (lat, lon) VALUES (%s, %s)", (lat, lon))
+            # New pin: name it once now, so viewers never need a live lookup
+            cursor.execute(
+                "INSERT INTO pins (lat, lon, place_name) VALUES (%s, %s, %s)",
+                (lat, lon, place_name(round(lat, 4), round(lon, 4))),
+            )
             pin_id = cursor.lastrowid
 
 
@@ -357,7 +404,7 @@ def get_pins():
     try:
         if lat and lon:
             query = """
-                SELECT p.id, p.lat, p.lon, p.created_at, MAX(i.uploaded_at) as last_upload_at,
+                SELECT p.id, p.lat, p.lon, p.place_name, p.created_at, MAX(i.uploaded_at) as last_upload_at,
                 ( 3959 * acos( cos( radians(%s) ) * cos( radians( p.lat ) ) * cos( radians( p.lon ) - radians(%s) ) + sin( radians(%s) ) * sin( radians( p.lat ) ) ) ) AS distance 
                 FROM pins p
                 LEFT JOIN images i ON p.id = i.pin_id
@@ -368,7 +415,7 @@ def get_pins():
             cursor.execute(query, (float(lat), float(lon), float(lat)))
         else:
             query = """
-                SELECT p.id, p.lat, p.lon, p.created_at, MAX(i.uploaded_at) as last_upload_at 
+                SELECT p.id, p.lat, p.lon, p.place_name, p.created_at, MAX(i.uploaded_at) as last_upload_at
                 FROM pins p
                 LEFT JOIN images i ON p.id = i.pin_id
                 GROUP BY p.id
@@ -457,6 +504,37 @@ def delete_image(image_id):
         conn.rollback()
         print(f"ADMIN DELETE ERROR: {e}")
         return jsonify({'error': 'Delete failed'}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+# Rename a pin, e.g. when the automatic name is misleading ("Hauz Khas" for JNU).
+# An empty name clears it, and viewers fall back to a live lookup.
+@app.route('/admin/pin/<int:pin_id>', methods=['PATCH'])
+@limiter.limit("20 per minute")
+@requires_auth
+def rename_pin(pin_id):
+    name = ((request.get_json(silent=True) or {}).get('place_name') or '').strip()
+    if len(name) > 120:
+        return jsonify({'error': 'Name must be 120 characters or fewer'}), 400
+
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE pins SET place_name = %s WHERE id = %s", (name or None, pin_id))
+        conn.commit()
+        if cursor.rowcount == 0:
+            # rowcount is 0 both for a missing pin and an unchanged name
+            cursor.execute("SELECT 1 FROM pins WHERE id = %s", (pin_id,))
+            if not cursor.fetchone():
+                return jsonify({'error': 'Pin not found'}), 404
+        return jsonify({'status': 'success', 'place_name': name or None}), 200
+    except Exception as e:
+        conn.rollback()
+        print(f"ADMIN RENAME ERROR: {e}")
+        return jsonify({'error': 'Rename failed'}), 500
     finally:
         cursor.close()
         conn.close()

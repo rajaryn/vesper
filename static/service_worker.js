@@ -1,4 +1,4 @@
-const CACHE_NAME = "vesper-cache-v80";
+const CACHE_NAME = "vesper-cache-v81";
 
 const ASSETS_TO_CACHE = [
   "/",

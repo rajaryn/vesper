@@ -360,7 +360,7 @@ export async function fetchAllPins() {
           rememberReturnView();
           flyToGently([pin.lat, pin.lon], 18);
         } else {
-          openMomentView(pin.id, pin.lat, pin.lon);
+          openMomentView(pin.id, pin.lat, pin.lon, null, pin.place_name);
         }
       });
       markersLayer.addLayer(marker);

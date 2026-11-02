@@ -12,12 +12,12 @@ import "./gallery.js";
 function openSharedMoment() {
   const data = document.getElementById("shared-moment");
   if (!data) return;
-  const { pinId, lat, lon, imageId } = JSON.parse(data.textContent);
+  const { pinId, lat, lon, imageId, placeName } = JSON.parse(data.textContent);
   // The app lives at "/"; the moment view pushes its own /m/ URL on top, so
   // Back closes the moment instead of leaving the site
   history.replaceState({}, "", "/");
   map.setView([lat, lon], 16);
-  openMomentView(pinId, lat, lon, imageId);
+  openMomentView(pinId, lat, lon, imageId, placeName);
 }
 
 window.onload = () => {
